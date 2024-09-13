@@ -5,7 +5,7 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-namespace AcnhorPoint.Editor
+namespace AnchorPoint.Editor
 {
     public class AnchorpointEditor : EditorWindow
     {
