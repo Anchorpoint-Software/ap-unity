@@ -58,7 +58,7 @@ namespace AnchorPoint.Parser
                     break;
             }
         }
-
+        
         public static Dictionary<string, string> GetLockList()
         {
             return _lockFiles;
