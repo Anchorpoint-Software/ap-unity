@@ -9,8 +9,8 @@ namespace AnchorPoint.Constants
     public static class CLIConstants
     {
         private const string APIVersion = "--apiVersion 1";
-        public static string CLIPath {get; private set;} = null;
-        public static string CLIVersion {get; private set;} = null;
+        public static string CLIPath { get; private set; } = null;
+        public static string CLIVersion { get; private set; } = null;
 
         /// <summary>
         /// Originally the current working directory will be the Unity project parent directory so this is implemented as that to get the CWD
@@ -18,7 +18,7 @@ namespace AnchorPoint.Constants
         /// </summary>
         // private static string WorkingDirectory => $"--cwd \"{System.IO.Directory.GetParent(Application.dataPath).FullName}\"";
         // public static string WorkingDirectory => "C:\\Users\\Op\\Documents\\_GitHub\\Unity Project";
-        public static string WorkingDirectory => "/Users/peermac/Documents/GitHub/AnchorPointTestProject";
+        public static string WorkingDirectory => Directory.GetCurrentDirectory();
 
         private static string CWD => $"--cwd \"{WorkingDirectory}\"";
 
@@ -30,13 +30,13 @@ namespace AnchorPoint.Constants
 
         public static string CommitFiles(string message, params string[] files)
         {
-            if(files.Length > 5)
+            if (files.Length > 5)
                 return Config(CLIConfig.CommitConfig(message, files));
             else
             {
                 string joinedFiles = string.Join(" ", files.Select(f => $"\"{f}\""));
                 return $"{CWD} --json {APIVersion} commit -m \"{message}\" -f{joinedFiles}";
-            } 
+            }
         }
 
         public static string Push => $"{CWD} --json {APIVersion} push";
@@ -45,13 +45,13 @@ namespace AnchorPoint.Constants
 
         public static string SyncFiles(string message, params string[] files)
         {
-            if(files.Length > 5)
+            if (files.Length > 5)
                 return Config(CLIConfig.SyncConfig(message, files));
             else
             {
                 string joinedFiles = string.Join(" ", files.Select(f => $"\"{f}\""));
                 return $"{CWD} --json {APIVersion} sync -m \"{message}\" -f{joinedFiles}";
-            } 
+            }
         }
 
         public static string UserList => $"{CWD} --json {APIVersion} user list";
@@ -60,7 +60,7 @@ namespace AnchorPoint.Constants
 
         public static string LockCreate(bool keep, params string[] files)
         {
-            if(files.Length > 5)
+            if (files.Length > 5)
             {
                 return Config(CLIConfig.LockCreateConfig(keep, files));
             }
@@ -73,7 +73,7 @@ namespace AnchorPoint.Constants
 
         public static string LockRemove(params string[] files)
         {
-            if(files.Length > 5)
+            if (files.Length > 5)
             {
                 return Config(CLIConfig.LockRemoveConfig(files));
             }
@@ -91,7 +91,7 @@ namespace AnchorPoint.Constants
         [InitializeOnLoadMethod]
         private static void GetCLIPath()
         {
-            CLIPath    = null;
+            CLIPath = null;
             CLIVersion = null;
 
             if (Environment.OSVersion.Platform == PlatformID.Win32NT)

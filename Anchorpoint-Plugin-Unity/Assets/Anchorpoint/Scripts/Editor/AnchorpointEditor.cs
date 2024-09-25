@@ -36,7 +36,7 @@ namespace AnchorPoint.Editor
             // Get the commit message text field and commit button
             TextField commitMessageField = root.Q<TextField>("CommitMessageField");
             Button commitButton = root.Q<Button>("CommitButton");
-            
+
             Label changesLabel = root.Q<Label>("ChangeCountLabel");
             int totalChanges = CalculateTotalChanges();
             changesLabel.text = $"Total Changes: {totalChanges}";
@@ -60,17 +60,17 @@ namespace AnchorPoint.Editor
             {
                 SetAllCheckboxes(false);
             };
-            
+
             // When the commit button is clicked, gather selected files and commit them
             commitButton.clickable.clicked += () =>
             {
                 string commitMessage = commitMessageField.value;
                 List<string> filesToCommit = GetSelectedFiles();
-                   
+
                 if (filesToCommit.Count > 0)
                 {
                     Debug.LogError($"Number of files that are included are {filesToCommit.Count}");
-                    Debug.LogError($"Path to the file {filesToCommit[0]}" );
+                    Debug.LogError($"Path to the file {filesToCommit[0]}");
                     // CLIWrapper.Commit(commitMessage, filesToCommit.ToArray());
                 }
                 else
@@ -226,7 +226,7 @@ namespace AnchorPoint.Editor
                 return new ProjectData { Name = "No CLI Data" };
             }
 
-            var projectRoot = new ProjectData { Name = "Project Root", Path = "", IsDirectory = true };
+            ProjectData projectRoot = null; // We'll store the actual root folder as the root
 
             // Helper method to find or create the path
             Func<string, ProjectData, ProjectData> findOrCreatePath = null;
@@ -244,6 +244,12 @@ namespace AnchorPoint.Editor
                 {
                     string fullPath = currentNode.Path != null ? Path.Combine(currentNode.Path, currentPart) : currentPart;
                     childNode = new ProjectData(currentPart, fullPath, true);
+
+                    // Set the project root to the first node (i.e., the actual project folder)
+                    if (projectRoot == null)
+                    {
+                        projectRoot = childNode;
+                    }
                     currentNode.Children.Add(childNode);
                 }
 
@@ -282,11 +288,15 @@ namespace AnchorPoint.Editor
                 }
             };
 
+            // Add not staged files to the structure
             if (status.NotStaged != null)
-                addFilesToStructure(status.NotStaged, projectRoot);
-            
+            {
+                addFilesToStructure(status.NotStaged, new ProjectData { Name = "", Path = "", IsDirectory = true });
+            }
+
             return projectRoot;
         }
+
 
         private void SetAllCheckboxes(bool isChecked)
         {
