@@ -32,6 +32,18 @@ namespace AnchorPoint.Wrapper
                 RunCommand(Command.Commit, CLIConstants.CommitAll(message), true);
         }
 
+        public static void Commit(string message, params string[] files)
+        {
+            if(string.IsNullOrEmpty(message))   
+            {
+                Output = string.Empty;
+                Debug.LogWarning("Commit Message empty!");
+                AddOutput($"\n\n<color=red>Commit Message empty!</color>");
+            }
+            else
+                RunCommand(Command.Commit, CLIConstants.CommitFiles(message, files), true);
+        }
+
         public static void Push() => RunCommand(Command.Push, CLIConstants.Push, true);
         
         public static void SyncAll(string message)
@@ -44,6 +56,18 @@ namespace AnchorPoint.Wrapper
             }   
             else
                 RunCommand(Command.Sync, CLIConstants.SyncAll(message), true);
+        }
+
+        public static void Sync(string message, params string[] files)
+        {
+            if(string.IsNullOrEmpty(message))
+            {
+                Output = string.Empty;
+                Debug.LogWarning("Commit Message empty!");
+                AddOutput($"\n\n<color=red>Commit Message empty!</color>");
+            }   
+            else
+                RunCommand(Command.Sync, CLIConstants.SyncFiles(message, files), true);
         }
 
         public static void UserList() => RunCommand(Command.UserList, CLIConstants.UserList);

@@ -31,9 +31,7 @@ namespace AnchorPoint.Constants
         public static string CommitFiles(string message, params string[] files)
         {
             if(files.Length > 5)
-            {
                 return Config(CLIConfig.CommitConfig(message, files));
-            }
             else
             {
                 string joinedFiles = string.Join(" ", files.Select(f => $"\"{f}\""));
@@ -48,9 +46,7 @@ namespace AnchorPoint.Constants
         public static string SyncFiles(string message, params string[] files)
         {
             if(files.Length > 5)
-            {
                 return Config(CLIConfig.SyncConfig(message, files));
-            }
             else
             {
                 string joinedFiles = string.Join(" ", files.Select(f => $"\"{f}\""));

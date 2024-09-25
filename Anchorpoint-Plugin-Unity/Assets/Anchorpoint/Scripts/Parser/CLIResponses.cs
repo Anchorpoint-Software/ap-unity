@@ -1,14 +1,24 @@
 using System.Collections.Generic;
+using Newtonsoft.Json;
 
 namespace AnchorPoint.Parser
 {
     [System.Serializable]
     public class CLIStatus
     {
+        [JsonProperty("current_branch")]
         public string CurrentBranch;
+
+        [JsonProperty("staged")]
         public Dictionary<string, string> Staged;
+
+        [JsonProperty("not_staged")]
         public Dictionary<string, string> NotStaged;
+
+        [JsonProperty("locked_files")]
         public Dictionary<string, string> LockedFiles;
+
+        [JsonProperty("outdated_files")]
         public List<string> OutdatedFiles;
     }
 

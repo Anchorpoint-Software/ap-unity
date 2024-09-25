@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using AnchorPoint.Parser;
+using AnchorPoint.Wrapper;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -10,7 +13,10 @@ namespace AnchorPoint.Editor
     public class AnchorpointEditor : EditorWindow
     {
         [SerializeField] private VisualTreeAsset m_VisualTreeAsset = default;
-        
+
+        private List<TreeViewItemData<ProjectData>> treeViewItems = new List<TreeViewItemData<ProjectData>>();
+        private ProjectData projectRoot; // Root of the project data tree
+
         [MenuItem("Window/Anchorpoint")]
         public static void ShowWindow()
         {
@@ -27,33 +33,104 @@ namespace AnchorPoint.Editor
             VisualElement labelFromUXML = m_VisualTreeAsset.Instantiate();
             root.Add(labelFromUXML);
 
-            CreateTreeUnity(root.Q<TreeView>());
+            // Get the commit message text field and commit button
+            TextField commitMessageField = root.Q<TextField>("CommitMessageField");
+            Button commitButton = root.Q<Button>("CommitButton");
+            
+            Label changesLabel = root.Q<Label>("ChangeCountLabel");
+            int totalChanges = CalculateTotalChanges();
+            changesLabel.text = $"Total Changes: {totalChanges}";
+
+            Button allButton = root.Q<Button>("AllButton");
+            Button noneButton = root.Q<Button>("NoneButton");
+
+            var treeView = root.Q<TreeView>("TreeView");
+            if (treeView == null)
+            {
+                Debug.LogError("TreeView not found in the UXML hierarchy!");
+                return;
+            }
+
+            allButton.clickable.clicked += () =>
+            {
+                SetAllCheckboxes(true);
+            };
+
+            noneButton.clickable.clicked += () =>
+            {
+                SetAllCheckboxes(false);
+            };
+            
+            // When the commit button is clicked, gather selected files and commit them
+            commitButton.clickable.clicked += () =>
+            {
+                string commitMessage = commitMessageField.value;
+                List<string> filesToCommit = GetSelectedFiles();
+                   
+                if (filesToCommit.Count > 0)
+                {
+                    Debug.LogError($"Number of files that are included are {filesToCommit.Count}");
+                    Debug.LogError($"Path to the file {filesToCommit[0]}" );
+                    // CLIWrapper.Commit(commitMessage, filesToCommit.ToArray());
+                }
+                else
+                {
+                    Debug.LogWarning("No files selected for commit.");
+                }
+            };
+
+            CreateTreeUnity(treeView);
         }
 
         private void CreateTreeUnity(TreeView treeView)
         {
-            var projectRoot = GetProjectStructure(Application.dataPath);
-
-            var items = new List<TreeViewItemData<ProjectData>>();
-
-            int idCounter = 0;
-            PopulateTreeItems(projectRoot, items, ref idCounter);
-
-            Func<VisualElement> makeItem = () =>
+            if (treeView == null)
             {
-                var container = new VisualElement();
-                container.style.flexDirection = FlexDirection.Row;
+                Debug.LogError("TreeView is null!");
+                return;
+            }
 
-                var checkbox = new Toggle() { name = "checkbox" };
+            projectRoot = GetCliProjectStructure();
+
+            if (projectRoot == null || projectRoot.Children.Count == 0)
+            {
+                Debug.LogWarning("No project structure data found or children are empty.");
+                return;
+            }
+            else
+            {
+                Debug.Log($"Project Root found: {projectRoot.Name}, Child Count: {projectRoot.Children.Count}");
+            }
+
+            treeViewItems.Clear();  // Clear any previous data
+            int idCounter = 0;
+            PopulateTreeItems(projectRoot, treeViewItems, ref idCounter);
+
+            // Use SetRootItems to assign the tree data
+            treeView.SetRootItems(treeViewItems);
+
+            // Define how to create each item
+            treeView.makeItem = () =>
+            {
+                var container = new VisualElement { style = { flexDirection = FlexDirection.Row } };
+
+                var checkbox = new Toggle { name = "checkbox" };
                 checkbox.style.marginRight = 5;
                 checkbox.style.marginTop = 3.5f;
 
-                var icon = new Image() { name = "icon" };
+                checkbox.RegisterCallback<ChangeEvent<bool>>(evt =>
+                {
+                    var itemData = (ProjectData)checkbox.userData;
+                    itemData.IsChecked = evt.newValue;
+                    Debug.LogError($"File {itemData.Name} checked: {itemData.IsChecked}");
+                });
+
+                var icon = new Image { name = "icon" };
                 icon.style.width = 16;
                 icon.style.height = 16;
                 icon.style.marginTop = 3;
 
-                var label = new Label() { name = "name" };
+                var label = new Label { name = "name" };
                 label.style.marginTop = 3;
 
                 container.Add(checkbox);
@@ -63,45 +140,36 @@ namespace AnchorPoint.Editor
                 return container;
             };
 
-            Action<VisualElement, int> bindItem = (element, index) =>
+            // Bind each item in the tree
+            treeView.bindItem = (element, index) =>
             {
                 var itemData = treeView.GetItemDataForIndex<ProjectData>(index);
+
                 var checkbox = element.Q<Toggle>("checkbox");
+                checkbox.userData = itemData;
+                checkbox.value = itemData.IsChecked;
+
                 var icon = element.Q<Image>("icon");
                 var nameLabel = element.Q<Label>("name");
 
                 nameLabel.text = itemData.Name;
 
-                // Try to fetch the icon
                 if (itemData.Icon != null)
                 {
                     icon.image = itemData.Icon;
                 }
                 else
                 {
-                    // Use a fallback icon for directories and files
-                    if (itemData.Children.Count > 0)
-                    {
-                        icon.image = EditorGUIUtility.IconContent("Folder Icon").image as Texture2D;
-                    }
-                    else
-                    {
-                        // Fallback for files - assign generic or specific file type icons
-                        icon.image = GetFileIcon(itemData.Path);
-                    }
+                    icon.image = GetFileIcon(itemData.Path);
                 }
 
-                // If it's a directory, hide the checkbox
-                checkbox.style.display = itemData.Children.Count > 0 ? DisplayStyle.None : DisplayStyle.Flex;
+                checkbox.style.display = itemData.IsDirectory ? DisplayStyle.None : DisplayStyle.Flex;
             };
 
-            treeView.SetRootItems(items);
-            treeView.makeItem = makeItem;
-            treeView.bindItem = bindItem;
             treeView.selectionType = SelectionType.Multiple;
-            treeView.Rebuild();
+            treeView.Rebuild(); // Rebuild the tree after setting items
         }
-    
+
         private void PopulateTreeItems(ProjectData data, List<TreeViewItemData<ProjectData>> items, ref int idCounter)
         {
             var treeItem = new TreeViewItemData<ProjectData>(idCounter++, data);
@@ -122,69 +190,161 @@ namespace AnchorPoint.Editor
 
         private Texture2D GetFileIcon(string path)
         {
-            // Here we are checking for specific file types and assigning relevant icons
-            if (path.EndsWith(".cs")) 
+            string iconType = "DefaultAsset Icon";
+
+            if (path.EndsWith(".cs"))
             {
-                return EditorGUIUtility.IconContent("cs Script Icon").image as Texture2D;
+                iconType = "cs Script Icon";
             }
             else if (path.EndsWith(".png") || path.EndsWith(".jpg") || path.EndsWith(".jpeg"))
             {
-                return EditorGUIUtility.IconContent("Texture Icon").image as Texture2D;
+                iconType = "Texture Icon";
             }
             else if (path.EndsWith(".prefab"))
             {
-                return EditorGUIUtility.IconContent("Prefab Icon").image as Texture2D;
+                iconType = "Prefab Icon";
             }
             else if (path.EndsWith(".unity"))
             {
-                return EditorGUIUtility.IconContent("SceneAsset Icon").image as Texture2D;
+                iconType = "SceneAsset Icon";
             }
-            // Add more conditions for other types of assets (like Audio, Materials, etc.)
+            else if (path.EndsWith(""))
+            {
+                iconType = "Folder Icon";
+            }
 
-            // Default file icon if no specific type is found
-            return EditorGUIUtility.IconContent("DefaultAsset Icon").image as Texture2D;
+            GUIContent iconContent = EditorGUIUtility.IconContent(iconType);
+            return iconContent?.image as Texture2D;
         }
 
-        private ProjectData GetProjectStructure(string path)
+        private ProjectData GetCliProjectStructure()
         {
-            // Retrieve the icon for the file or folder
-            var icon = AssetDatabase.GetCachedIcon(path) as Texture2D;
-
-            var projectData = new ProjectData
+            CLIStatus status = DataManager.GetStatus();
+            if (status == null)
             {
-                Name = Path.GetFileName(path),
-                Path = path,
-                Icon = icon
-            };
-
-            foreach (var directory in Directory.GetDirectories(path))
-            {
-                projectData.Children.Add(GetProjectStructure(directory));
+                Debug.LogError("CLIStatus is null");
+                return new ProjectData { Name = "No CLI Data" };
             }
 
-            foreach (var file in Directory.GetFiles(path))
+            var projectRoot = new ProjectData { Name = "Project Root", Path = "", IsDirectory = true };
+
+            // Helper method to find or create the path
+            Func<string, ProjectData, ProjectData> findOrCreatePath = null;
+            findOrCreatePath = (path, currentNode) =>
             {
-                if (!file.EndsWith(".meta")) // Skip .meta files
+                if (string.IsNullOrEmpty(path))
+                    return currentNode;
+
+                string[] parts = path.Split(new char[] { '/', '\\' }, 2);
+                string currentPart = parts[0];
+                string remainingPath = parts.Length > 1 ? parts[1] : "";
+
+                var childNode = currentNode.Children.FirstOrDefault(c => c.Name == currentPart && c.IsDirectory);
+                if (childNode == null)
                 {
-                    var fileIcon = AssetDatabase.GetCachedIcon(file) as Texture2D;
-                    projectData.Children.Add(new ProjectData
+                    string fullPath = currentNode.Path != null ? Path.Combine(currentNode.Path, currentPart) : currentPart;
+                    childNode = new ProjectData(currentPart, fullPath, true);
+                    currentNode.Children.Add(childNode);
+                }
+
+                return findOrCreatePath(remainingPath, childNode);
+            };
+
+            // Add files to the correct directory
+            Action<Dictionary<string, string>, ProjectData> addFilesToStructure = (files, rootNode) =>
+            {
+                foreach (var file in files)
+                {
+                    // Skip meta files
+                    if (file.Key.EndsWith(".meta"))
+                        continue;
+
+                    string fullPath = file.Key;
+
+                    // Create or find the correct directory node
+                    ProjectData directoryNode = findOrCreatePath(Path.GetDirectoryName(fullPath), rootNode);
+
+                    // Add the file and its meta file to the tree
+                    directoryNode.Children.Add(new ProjectData(Path.GetFileName(fullPath), fullPath, false)
                     {
-                        Name = Path.GetFileName(file),
-                        Path = file,
-                        Icon = fileIcon
+                        Icon = GetFileIcon(fullPath)
                     });
+
+                    // Check and add the meta file if it exists
+                    string metaFilePath = fullPath + ".meta";
+                    if (File.Exists(metaFilePath))
+                    {
+                        directoryNode.Children.Add(new ProjectData(Path.GetFileName(metaFilePath), metaFilePath, false)
+                        {
+                            Icon = GetFileIcon(metaFilePath)
+                        });
+                    }
+                }
+            };
+
+            if (status.NotStaged != null)
+                addFilesToStructure(status.NotStaged, projectRoot);
+            
+            return projectRoot;
+        }
+
+        private void SetAllCheckboxes(bool isChecked)
+        {
+            if (treeViewItems != null && treeViewItems.Count > 0)
+            {
+                SetAllCheckboxesRecursive(treeViewItems.Select(x => x.data), isChecked);
+            }
+
+            var treeView = rootVisualElement.Q<TreeView>("TreeView");
+            treeView.Rebuild(); // Rebuild the tree view to reflect the changes
+        }
+
+        private void SetAllCheckboxesRecursive(IEnumerable<ProjectData> dataItems, bool isChecked)
+        {
+            foreach (var item in dataItems)
+            {
+                item.IsChecked = isChecked;
+                if (item.Children != null && item.Children.Any())
+                {
+                    SetAllCheckboxesRecursive(item.Children, isChecked);
+                }
+            }
+        }
+
+        // Function to gather selected files and their meta files
+        private List<string> GetSelectedFiles()
+        {
+            List<string> selectedFiles = new List<string>();
+            AddSelectedFilesRecursive(projectRoot, selectedFiles);
+            return selectedFiles;
+        }
+
+        // Recursive function to collect selected files
+        private void AddSelectedFilesRecursive(ProjectData node, List<string> selectedFiles)
+        {
+            if (node.IsChecked && !node.IsDirectory)
+            {
+                selectedFiles.Add(node.Path);
+                string metaFilePath = node.Path + ".meta";
+                if (File.Exists(metaFilePath))
+                {
+                    selectedFiles.Add(metaFilePath);
                 }
             }
 
-            return projectData;
+            if (node.Children != null)
+            {
+                foreach (var child in node.Children)
+                {
+                    AddSelectedFilesRecursive(child, selectedFiles);
+                }
+            }
         }
-    }
 
-    public class ProjectData
-    {
-        public string Name { get; set; }
-        public string Path { get; set; }
-        public Texture2D Icon { get; set; }
-        public List<ProjectData> Children { get; set; } = new List<ProjectData>();
+        private int CalculateTotalChanges()
+        {
+            CLIStatus status = DataManager.GetStatus();
+            return status?.NotStaged?.Count ?? 0;
+        }
     }
 }
