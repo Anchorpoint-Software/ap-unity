@@ -354,7 +354,23 @@ namespace AnchorPoint.Editor
         private int CalculateTotalChanges()
         {
             CLIStatus status = DataManager.GetStatus();
-            return status?.NotStaged?.Count ?? 0;
+            int totalChanges = 0;
+            string projectRootFolderName = Path.GetFileName(Directory.GetCurrentDirectory());
+
+            if (status?.NotStaged != null)
+            {
+                foreach (var entry in status.NotStaged)
+                {
+                    string filePath = entry.Key;
+
+                    if (filePath.Contains(projectRootFolderName))
+                    {
+                        totalChanges++;
+                    }
+                }
+            }
+
+            return totalChanges;
         }
     }
 }
