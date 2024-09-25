@@ -355,8 +355,11 @@ namespace AnchorPoint.Editor
         {
             CLIStatus status = DataManager.GetStatus();
             int totalChanges = 0;
-            string projectRootFolderName = Path.GetFileName(Directory.GetCurrentDirectory());
+            string projectRootFolderPath = @"Users/peermac/Documents/GitHub/AnchorPointTestProject";
+            string projectRootFolderName = Path.GetFileName(projectRootFolderPath);
 
+            Debug.LogError(projectRootFolderName);
+            
             if (status?.NotStaged != null)
             {
                 foreach (var entry in status.NotStaged)

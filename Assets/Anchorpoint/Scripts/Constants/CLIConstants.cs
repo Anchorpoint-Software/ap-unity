@@ -17,8 +17,8 @@ namespace AnchorPoint.Constants
         /// But in development stage we are using a empty Dummy Unity Project cloned in Anchorpoint so wherever that exists the path for that is manually passed here as the CWD. 
         /// </summary>
         // private static string WorkingDirectory => $"--cwd \"{System.IO.Directory.GetParent(Application.dataPath).FullName}\"";
-        // public static string WorkingDirectory => "C:\\Users\\Op\\Documents\\_GitHub\\Unity Project";
-        public static string WorkingDirectory => Directory.GetCurrentDirectory();
+        public static string WorkingDirectory => "/Users/peermac/Documents/GitHub/AnchorPointTestProject";
+        // public static string WorkingDirectory => Directory.GetCurrentDirectory();
 
         private static string CWD => $"--cwd \"{WorkingDirectory}\"";
 
