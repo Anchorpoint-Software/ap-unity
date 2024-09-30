@@ -1,0 +1,20 @@
+{
+  "name": "com.anchorpoint.sourcecontrol",
+  "version": "1.0.0",
+  "displayName": "AnchorPoint",
+  "description": "A package that connects AnchorPoint app with Unity",
+  "unity": "2018.1",
+  "author": {
+    "name": "AnchorPoint",
+    "email": "contact@anchorpoint.app",
+    "url": "https://www.anchorpoint.app/"
+  },
+  "keywords": [
+    "anchorpoint",
+    "Anchor Point",
+    "source control"
+  ],
+  "dependencies": {
+    "com.unity.nuget.newtonsoft-json": "3.2.1"
+  }
+}
