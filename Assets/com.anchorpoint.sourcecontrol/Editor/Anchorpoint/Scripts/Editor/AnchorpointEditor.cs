@@ -269,7 +269,8 @@ namespace AnchorPoint.Editor
                 return new ProjectData { Name = "No CLI Data" };
             }
 
-            var projectRoot = new ProjectData { Name = "Project Root", Path = "", IsDirectory = true, IsEmptyDirectory = false, Status = "Unknown"};
+            string projectDirectory = Path.GetFileName(Path.GetDirectoryName(Application.dataPath));
+            var projectRoot = new ProjectData { Name = projectDirectory, Path = Application.dataPath, IsDirectory = true, IsEmptyDirectory = false, Status = "Unknown" };         
 
             // Helper method to find or create the path
             Func<string, ProjectData, ProjectData> findOrCreatePath = null;
