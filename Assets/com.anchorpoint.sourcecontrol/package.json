@@ -1,11 +1,11 @@
 {
   "name": "com.anchorpoint.sourcecontrol",
   "version": "1.0.0",
-  "displayName": "Anchorpoint",
-  "description": "Perform basic version control operations with Anchorpoint from the Unity Editor",
+  "displayName": "AnchorPoint",
+  "description": "A package that connects AnchorPoint app with Unity",
   "unity": "2018.1",
   "author": {
-    "name": "Anchorpoint",
+    "name": "AnchorPoint",
     "email": "contact@anchorpoint.app",
     "url": "https://www.anchorpoint.app/"
   },

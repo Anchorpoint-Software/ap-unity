@@ -18,36 +18,42 @@ namespace AnchorPoint.Editor
 
         private List<TreeViewItemData<ProjectData>> treeViewItems = new List<TreeViewItemData<ProjectData>>();
         private ProjectData projectRoot; // Root of the project data tree
-        
+        private TreeView treeView;
+        private Button commitButton;
+        private Label outputLogsLabel;
+
+        // Global paths
+        private string projectPath;      // Absolute path to the Unity project root
+        private const string assetsFolderName = "Assets";
+        private string assetsPath;       // Absolute path to the Assets folder
+
+        private const string anchorPointIcon = "d8e0264a1e3a54b09aaf9e7ac62d4e1f";
+
         private void OnEnable()
         {
             CLIWrapper.RefreshWindow += OnEditorUpdate;
+            CLIWrapper.OnCommandOutputReceived += OnCommandOutputReceived; 
         }
-        
+
         private void OnDisable()
         {
             CLIWrapper.RefreshWindow -= OnEditorUpdate;
+            CLIWrapper.OnCommandOutputReceived -= OnCommandOutputReceived; 
         }
-        
+
         private void OnEditorUpdate()
         {
-            // Clear the rootVisualElement to remove all existing UI
             rootVisualElement.Clear();
-    
-            // Rebuild the entire UI, including the TreeView and labels
             CreateGUI();
-    
-            // Ensure the window is repainted after the rebuild
-            Repaint();
         }
 
         [MenuItem("Window/Anchorpoint")]
         public static void ShowWindow()
         {
             AnchorpointEditor window = GetWindow<AnchorpointEditor>();
-            
-            string assetPath = AssetDatabase.GUIDToAssetPath("d8e0264a1e3a54b09aaf9e7ac62d4e1f");
-            Texture2D icon = (Texture2D)AssetDatabase.LoadAssetAtPath(assetPath, typeof(Texture2D));
+
+            string assetPath = AssetDatabase.GUIDToAssetPath("anchorPointIcon");
+            Texture2D icon = (Texture2D)AssetDatabase.LoadAssetAtPath<Texture2D>(assetPath);
             window.titleContent = new GUIContent(" AnchorPoint", icon);
         }
 
@@ -60,8 +66,10 @@ namespace AnchorPoint.Editor
 
             // Get the commit message text field and commit button
             TextField commitMessageField = root.Q<TextField>("CommitMessageField");
-            Button commitButton = root.Q<Button>("CommitButton");
-            
+            commitButton = root.Q<Button>("CommitButton");
+            outputLogsLabel = root.Q<Label>("OutputLogs");
+            commitButton.SetEnabled(false); // Disable the commit button initially
+
             Label changesLabel = root.Q<Label>("ChangeCountLabel");
             int totalChanges = CalculateTotalChanges();
             changesLabel.text = $"Total Changes: {totalChanges}";
@@ -69,32 +77,21 @@ namespace AnchorPoint.Editor
             Button allButton = root.Q<Button>("AllButton");
             Button noneButton = root.Q<Button>("NoneButton");
 
-            var treeView = root.Q<TreeView>("TreeView");
-            if (treeView == null)
-            {
-                AnchorPointLogger.LogError("TreeView not found in the UXML hierarchy!");
-                return;
-            }
+            treeView = root.Q<TreeView>("TreeView");
 
-            allButton.clickable.clicked += () =>
-            {
-                SetAllCheckboxes(true);
-            };
+            allButton.clickable.clicked += () => { SetAllCheckboxes(true); };
+            noneButton.clickable.clicked += () => { SetAllCheckboxes(false); };
 
-            noneButton.clickable.clicked += () =>
-            {
-                SetAllCheckboxes(false);
-            };
-            
             // When the commit button is clicked, gather selected files and commit them
             commitButton.clickable.clicked += () =>
             {
                 string commitMessage = commitMessageField.value;
                 List<string> filesToCommit = GetSelectedFiles();
-                
-                if (filesToCommit.Count > 0)
+
+                if (IsAnyFileSelected())
                 {
-                    CLIWrapper.Commit(commitMessage, filesToCommit.ToArray());
+                    commitButton.SetEnabled(false);
+                    CLIWrapper.Sync(commitMessage, filesToCommit.ToArray());
                 }
                 else
                 {
@@ -132,7 +129,6 @@ namespace AnchorPoint.Editor
             // Use SetRootItems to assign the tree data
             treeView.SetRootItems(treeViewItems);
 
-            // Define how to create each item
             treeView.makeItem = () =>
             {
                 var container = new VisualElement { style = { flexDirection = FlexDirection.Row } };
@@ -145,6 +141,7 @@ namespace AnchorPoint.Editor
                 {
                     var itemData = (ProjectData)checkbox.userData;
                     itemData.IsChecked = evt.newValue;
+                    commitButton.SetEnabled(IsAnyFileSelected()); // Update the commit button state
                 });
 
                 var icon = new Image { name = "icon" };
@@ -180,19 +177,16 @@ namespace AnchorPoint.Editor
                 switch (itemData.Status)
                 {
                     case "A":  // Added files
-                        nameLabel.style.color = new StyleColor(Color.green);  // Use StyleColor to set color
+                        nameLabel.style.color = new StyleColor(Color.green);
                         break;
-
                     case "M":  // Modified files
-                        nameLabel.style.color = new StyleColor(Color.yellow);  // Use StyleColor for yellow
+                        nameLabel.style.color = new StyleColor(Color.yellow);
                         break;
-
                     case "D":  // Deleted files
-                        nameLabel.style.color = new StyleColor(Color.red);  // Use StyleColor for red
+                        nameLabel.style.color = new StyleColor(Color.red);
                         break;
-
                     default:
-                        nameLabel.style.color = new StyleColor(Color.white);  // Default to white
+                        nameLabel.style.color = new StyleColor(Color.white);
                         break;
                 }
 
@@ -202,62 +196,161 @@ namespace AnchorPoint.Editor
                 }
                 else
                 {
-                    icon.image = GetFileIcon(itemData.Path);
+                    // Fallback icon if necessary
+                    icon.image = EditorGUIUtility.IconContent("Folder Icon").image as Texture2D;
                 }
 
-                checkbox.style.display = itemData.IsDirectory ? DisplayStyle.None : DisplayStyle.Flex;
-                checkbox.style.display = itemData.IsEmptyDirectory ? DisplayStyle.Flex : checkbox.style.display;
+                // Show checkboxes for files, empty folders, and deleted folders
+                if (itemData.IsDirectory)
+                {
+                    if (itemData.IsEmptyDirectory || itemData.Status == "D" || itemData.Status == "A")
+                    {
+                        checkbox.style.display = DisplayStyle.Flex;
+                    }
+                    else
+                    {
+                        checkbox.style.display = DisplayStyle.None;
+                    }
+                }
+                else
+                {
+                    checkbox.style.display = DisplayStyle.Flex;
+                }
             };
 
             treeView.selectionType = SelectionType.Multiple;
             treeView.Rebuild(); // Rebuild the tree after setting items
+            treeView.ExpandAll();
         }
 
         private void PopulateTreeItems(ProjectData data, List<TreeViewItemData<ProjectData>> items, ref int idCounter)
         {
-            var treeItem = new TreeViewItemData<ProjectData>(idCounter++, data);
+            List<TreeViewItemData<ProjectData>> childItems = null;
 
             if (data.Children.Count > 0)
             {
-                var childItems = new List<TreeViewItemData<ProjectData>>();
+                childItems = new List<TreeViewItemData<ProjectData>>();
                 foreach (var child in data.Children)
                 {
+                    child.Parent = data;  // Set the parent reference for the child
                     PopulateTreeItems(child, childItems, ref idCounter);
                 }
-
-                treeItem = new TreeViewItemData<ProjectData>(idCounter++, data, childItems);
             }
 
+            var treeItem = new TreeViewItemData<ProjectData>(idCounter++, data, childItems);
             items.Add(treeItem);
         }
 
-        private Texture2D GetFileIcon(string path)
+        private Texture2D GetFileIcon(string relativePath)
         {
-            string iconType = "DefaultAsset Icon";
+            // Normalize the path separators to forward slashes
+            relativePath = relativePath.Replace('\\', '/');
 
-            if (path.EndsWith(".cs"))
+            // Ensure the path is relative and starts with "Assets/"
+            if (!relativePath.StartsWith(assetsFolderName + "/", StringComparison.OrdinalIgnoreCase))
             {
-                iconType = "cs Script Icon";
-            }
-            else if (path.EndsWith(".png") || path.EndsWith(".jpg") || path.EndsWith(".jpeg"))
-            {
-                iconType = "Texture Icon";
-            }
-            else if (path.EndsWith(".prefab"))
-            {
-                iconType = "Prefab Icon";
-            }
-            else if (path.EndsWith(".unity"))
-            {
-                iconType = "SceneAsset Icon";
-            }
-            else if (path.EndsWith(""))
-            {
-                iconType = "Folder Icon";
+                relativePath = assetsFolderName + "/" + relativePath.TrimStart('/');
             }
 
-            GUIContent iconContent = EditorGUIUtility.IconContent(iconType);
-            return iconContent?.image as Texture2D;
+            // Convert the relative path to an absolute path for the file system
+            string absolutePath = Path.Combine(projectPath, relativePath.Replace('/', Path.DirectorySeparatorChar));
+
+            // Check if the asset exists on disk
+            bool assetExists = File.Exists(absolutePath) || Directory.Exists(absolutePath);
+
+            // Load the asset at the given relative path
+            UnityEngine.Object asset = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(relativePath);
+
+            if (asset != null && assetExists)
+            {
+                // Get the icon for the loaded asset
+                Texture2D icon = AssetPreview.GetMiniThumbnail(asset);
+                return icon;
+            }
+            else
+            {
+                // Asset doesn't exist on disk or can't be loaded
+                // Get the file extension
+                string extension = Path.GetExtension(relativePath).ToLowerInvariant();
+
+                // Map file extensions to Unity icon names
+                string iconName = GetIconNameForExtension(extension);
+
+                // Get the icon
+                GUIContent iconContent = EditorGUIUtility.IconContent(iconName);
+                if (iconContent != null && iconContent.image != null)
+                {
+                    return iconContent.image as Texture2D;
+                }
+                else
+                {
+                    // Fallback to default icons
+                    if (Directory.Exists(absolutePath))
+                    {
+                        // It's a folder
+                        GUIContent folderIcon = EditorGUIUtility.IconContent("Folder Icon");
+                        return folderIcon?.image as Texture2D;
+                    }
+                    else
+                    {
+                        // Use generic warning icon
+                        GUIContent defaultIcon = EditorGUIUtility.IconContent("console.warnicon");
+                        return defaultIcon?.image as Texture2D;
+                    }
+                }
+            }
+        }
+
+        private string GetIconNameForExtension(string extension)
+        {
+            switch (extension)
+            {
+                case ".cs":
+                    return "cs Script Icon";
+                case ".js":
+                    return "Js Script Icon";
+                case ".boo":
+                    return "Boo Script Icon";
+                case ".shader":
+                    return "Shader Icon";
+                case ".png":
+                case ".jpg":
+                case ".jpeg":
+                case ".tga":
+                case ".psd":
+                case ".gif":
+                    return "Texture Icon";
+                case ".mat":
+                    return "Material Icon";
+                case ".prefab":
+                    return "Prefab Icon";
+                case ".fbx":
+                case ".obj":
+                    return "Mesh Icon";
+                case ".anim":
+                    return "Animation Icon";
+                case ".controller":
+                    return "AnimatorController Icon";
+                case ".ttf":
+                case ".otf":
+                case ".fon":
+                    return "Font Icon";
+                case ".txt":
+                case ".xml":
+                case ".json":
+                    return "TextAsset Icon";
+                case ".unity":
+                    return "SceneAsset Icon";
+                case ".asset":
+                    return "ScriptableObject Icon";
+                case ".wav":
+                case ".mp3":
+                case ".ogg":
+                    return "AudioClip Icon";
+                // Add more cases as needed for different file types
+                default:
+                    return "DefaultAsset Icon";
+            }
         }
 
         private ProjectData GetCliProjectStructure()
@@ -266,13 +359,27 @@ namespace AnchorPoint.Editor
             if (status == null)
             {
                 AnchorPointLogger.LogError("CLIStatus is null");
+                CLIWrapper.Status();
                 return new ProjectData { Name = "No CLI Data" };
             }
 
-            string projectDirectory = Path.GetFileName(Path.GetDirectoryName(Application.dataPath));
-            var projectRoot = new ProjectData { Name = projectDirectory, Path = Application.dataPath, IsDirectory = true, IsEmptyDirectory = false, Status = "Unknown" };         
+            projectPath = Directory.GetParent(Application.dataPath).FullName;
+            assetsPath = Path.Combine(projectPath, assetsFolderName);
 
-            // Helper method to find or create the path
+            string projectName = Directory.GetParent(Application.dataPath).Name;
+            string rootRelativePath = projectPath.Substring(CLIConstants.WorkingDirectory.Length).TrimStart(Path.DirectorySeparatorChar);
+
+            var projectRoot = new ProjectData
+            {
+                Name = projectName,
+                Path = projectPath,
+                IsDirectory = true,
+                IsEmptyDirectory = false,
+                Status = "Unknown",
+                CommitPath = rootRelativePath
+            };
+
+            // Function to find or create a node in the project data tree based on the given path
             Func<string, ProjectData, ProjectData> findOrCreatePath = null;
             findOrCreatePath = (path, currentNode) =>
             {
@@ -283,94 +390,125 @@ namespace AnchorPoint.Editor
                 string currentPart = parts[0];
                 string remainingPath = parts.Length > 1 ? parts[1] : "";
 
+                // Adjusted to include empty directories
                 var childNode = currentNode.Children.FirstOrDefault(c => c.Name == currentPart && c.IsDirectory);
                 if (childNode == null)
                 {
                     string fullPath = currentNode.Path != null ? Path.Combine(currentNode.Path, currentPart) : currentPart;
-                    childNode = new ProjectData(currentPart, fullPath, true);
+
+                    // Calculate the CommitPath
+                    string commitPath = !string.IsNullOrEmpty(currentNode.CommitPath)
+                        ? Path.Combine(currentNode.CommitPath, currentPart)
+                        : currentPart;
+
+                    childNode = new ProjectData(currentPart, fullPath, true)
+                    {
+                        Parent = currentNode,
+                        CommitPath = commitPath // Set the CommitPath for the directory
+                    };
                     currentNode.Children.Add(childNode);
                 }
 
                 return findOrCreatePath(remainingPath, childNode);
             };
 
-           Action<Dictionary<string, string>, ProjectData> addFilesToStructure = (files, rootNode) =>
-           {
-                HashSet<string> processedPaths = new HashSet<string>();
+            Action<Dictionary<string, string>, ProjectData> addFilesToStructure = (files, rootNode) =>
+            {
+                HashSet<string> processedPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
                 foreach (var file in files)
                 {
-                    string relativePath = file.Key;
-                    string statusFlag = file.Value; // 'A', 'M', 'D'
-                    string fullPath = Path.Combine(CLIConstants.WorkingDirectory, relativePath); // Full path from git root
-                    string projectRelativePath = fullPath.Replace(CLIConstants.WorkingDirectory, "").TrimStart(Path.DirectorySeparatorChar);
+                    string relativePath = file.Key; // e.g., "Assets/New Folder 1/New Folder/New Folder/One.cs"
+                    string statusFlag = file.Value;  // e.g., "D"
+                    string fullPath = Path.Combine(CLIConstants.WorkingDirectory, relativePath);
 
-                    // Handle .meta files
+                    if (!fullPath.StartsWith(projectPath, StringComparison.OrdinalIgnoreCase))
+                        continue;
+
+                    string projectRelativePath = fullPath.Replace(projectPath, "").TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+
                     if (relativePath.EndsWith(".meta"))
                     {
-                        string basePath = fullPath.Replace(".meta", "");
+                        string baseRelativePath = relativePath.Substring(0, relativePath.Length - 5); // Remove ".meta"
+                        string baseFullPath = fullPath.Substring(0, fullPath.Length - 5);
+                        string baseProjectRelativePath = baseFullPath.Replace(projectPath, "").TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
 
-                        // Only show .meta files if they belong to deleted files or empty folders
-                        if (File.Exists(basePath) || processedPaths.Contains(basePath))
-                        {
-                            continue; // Skip showing the .meta file if the base file exists or has been processed
-                        }
+                        // Check if the base path is a directory
+                        bool isDirectory = !Path.HasExtension(baseFullPath);
 
-                        // Show orphaned .meta files (deleted assets) or empty folder .meta
-                        if (Directory.Exists(basePath))
+                        if (isDirectory)
                         {
-                            if (Directory.GetFiles(basePath).Length == 0 && Directory.GetDirectories(basePath).Length == 0)
+                            // It's an empty or deleted folder
+                            ProjectData directoryNode = findOrCreatePath(Path.GetDirectoryName(baseProjectRelativePath), rootNode);
+
+                            // Avoid adding duplicate folders
+                            if (!directoryNode.Children.Any(c => c.Name.Equals(Path.GetFileName(baseFullPath), StringComparison.OrdinalIgnoreCase) && c.IsDirectory))
                             {
-                                ProjectData directoryNode = findOrCreatePath(Path.GetDirectoryName(projectRelativePath), rootNode);
-                                directoryNode.Children.Add(new ProjectData(Path.GetFileName(basePath), projectRelativePath, true, true, statusFlag)  // <-- Setting status here
+                                string folderName = Path.GetFileName(baseFullPath);
+                                string folderProjectRelativePath = baseProjectRelativePath;
+                                string folderCommitPath = relativePath;
+
+                                ProjectData newItem = new ProjectData
                                 {
-                                    Icon = GetFileIcon(basePath)
-                                });
-                                processedPaths.Add(basePath); // Mark folder as processed
+                                    Name = folderName,
+                                    Path = folderProjectRelativePath,
+                                    CommitPath = folderCommitPath, // Include ".meta" in CommitPath
+                                    IsDirectory = true,
+                                    IsEmptyDirectory = true,
+                                    Status = statusFlag,
+                                    Icon = GetFileIcon(folderProjectRelativePath)
+                                };
+
+                                directoryNode.Children.Add(newItem);
+                                processedPaths.Add(baseFullPath);
                             }
                         }
                         else
                         {
-                            // Show orphaned meta file for deleted assets
-                            ProjectData directoryNode = findOrCreatePath(Path.GetDirectoryName(projectRelativePath), rootNode);
-                            directoryNode.Children.Add(new ProjectData(Path.GetFileName(projectRelativePath), projectRelativePath, false, false, statusFlag)  // <-- Setting status here
-                            {
-                                Icon = GetFileIcon(projectRelativePath)
-                            });
-                            processedPaths.Add(fullPath); // Mark .meta file as processed
+                            // It's a .meta file for a file (not a directory), skip processing
+                            continue;
                         }
                     }
                     else
                     {
-                        // Handle regular files and non-empty folders
-                        if (!processedPaths.Contains(fullPath))
+                        // Regular file
+                        if (processedPaths.Contains(fullPath))
+                            continue; // Skip if already processed
+
+                        ProjectData directoryNode = findOrCreatePath(Path.GetDirectoryName(projectRelativePath), rootNode);
+
+                        ProjectData newItem = new ProjectData
                         {
-                            ProjectData directoryNode = findOrCreatePath(Path.GetDirectoryName(projectRelativePath), rootNode);
-                            directoryNode.Children.Add(new ProjectData(Path.GetFileName(fullPath), projectRelativePath, false, false, statusFlag)  // <-- Setting status here
-                            {
-                                Icon = GetFileIcon(fullPath)
-                            });
-                            processedPaths.Add(fullPath); // Mark the file as processed
-                        } 
+                            Name = Path.GetFileName(fullPath),
+                            Path = projectRelativePath,
+                            CommitPath = relativePath,
+                            IsDirectory = false,
+                            Status = statusFlag,
+                            Icon = GetFileIcon(projectRelativePath) // Use relative path
+                        };
+
+                        directoryNode.Children.Add(newItem);
+                        processedPaths.Add(fullPath);
                     }
                 }
-           };
-           
-           if (status.NotStaged != null)
-               addFilesToStructure(status.NotStaged, projectRoot);
+            };
 
-           return projectRoot;
+            if (status.NotStaged != null)
+                addFilesToStructure(status.NotStaged, projectRoot);
+
+            return projectRoot;
         }
-        
+
         private void SetAllCheckboxes(bool isChecked)
         {
             if (treeViewItems != null && treeViewItems.Count > 0)
             {
                 SetAllCheckboxesRecursive(treeViewItems.Select(x => x.data), isChecked);
+                commitButton.SetEnabled(IsAnyFileSelected());
             }
 
-            var treeView = rootVisualElement.Q<TreeView>("TreeView");
-            treeView.Rebuild(); // Rebuild the tree view to reflect the changes
+            treeView = rootVisualElement.Q<TreeView>("TreeView");
+            treeView.Rebuild();
         }
 
         private void SetAllCheckboxesRecursive(IEnumerable<ProjectData> dataItems, bool isChecked)
@@ -385,141 +523,220 @@ namespace AnchorPoint.Editor
             }
         }
 
-        // Function to gather selected files and their meta files
+        // Function to gather selected files, meta files, and handle deleted folders
         private List<string> GetSelectedFiles()
         {
             List<string> selectedFiles = new List<string>();
 
             // Recursively add files and meta files, even if they are deleted
             AddSelectedFilesRecursive(projectRoot, selectedFiles);
+
+            // Handle deleted folders and their meta files
+            HandleDeletedFolders(projectRoot, selectedFiles);
+
             return selectedFiles;
         }
 
-        private void AddSelectedFilesRecursive(ProjectData node, List<string> selectedFiles)
+        private bool IsAnyFileSelected()
         {
+            return GetSelectedFiles().Count > 0;
+        }
+
+        private bool AddSelectedFilesRecursive(ProjectData node, List<string> selectedFiles)
+        {
+            CLIStatus status = DataManager.GetStatus();
+            var notStagedFiles = status.NotStaged;
+
             bool hasFileSelected = false;
 
-            // If the node is selected and it's not a directory (i.e., a file)
-            if (node.IsChecked && !node.IsDirectory)
+            if (node.IsChecked)
             {
-                selectedFiles.Add(node.Path); // Add the file itself
-                hasFileSelected = true; // Mark that a file is selected
-
-                // If it's not already a .meta file, check for and add its associated .meta file
-                if (!node.Path.EndsWith(".meta"))
+                if (node.IsDirectory)
                 {
-                    string metaFilePath = node.Path + ".meta";
-
-                    // Add the .meta file if it exists or if it's part of a staged/unstaged list
-                    if (File.Exists(metaFilePath) || DataManager.GetStatus().NotStaged.ContainsKey(metaFilePath))
+                    // For empty or deleted directories, the CommitPath includes ".meta"
+                    if (notStagedFiles.ContainsKey(node.CommitPath) && !selectedFiles.Contains(node.CommitPath))
                     {
-                        selectedFiles.Add(metaFilePath); // Add the corresponding .meta file
+                        selectedFiles.Add(node.CommitPath);
+                    }
+
+                    hasFileSelected = true;
+
+                    // If the directory is deleted, include all child items
+                    if (node.Status == "D" && node.Children != null)
+                    {
+                        foreach (var child in node.Children)
+                        {
+                            child.IsChecked = true; // Mark child as checked
+                            AddSelectedFilesRecursive(child, selectedFiles);
+                        }
+                    }
+                }
+                else
+                {
+                    // Node is a file
+                    if (notStagedFiles.ContainsKey(node.CommitPath) && !selectedFiles.Contains(node.CommitPath))
+                    {
+                        selectedFiles.Add(node.CommitPath);
+
+                        // Add the .meta file if it exists in notStagedFiles
+                        string metaFilePath = node.CommitPath + ".meta";
+                        if (notStagedFiles.ContainsKey(metaFilePath) && !selectedFiles.Contains(metaFilePath))
+                        {
+                            selectedFiles.Add(metaFilePath);
+                        }
+
+                        hasFileSelected = true;
                     }
                 }
             }
 
-            // Recursively process child nodes to see if any files are selected
-            if (node.Children != null && node.Children.Any())
+            // Process children
+            if (node.Children != null)
             {
                 foreach (var child in node.Children)
                 {
-                    AddSelectedFilesRecursive(child, selectedFiles);
-
-                    // If any file in this folder is selected, mark that the folder itself should be included
-                    if (child.IsChecked || child.Children.Any(c => c.IsChecked)) // Check if any children are checked
+                    bool childHasFileSelected = AddSelectedFilesRecursive(child, selectedFiles);
+                    if (childHasFileSelected)
                     {
                         hasFileSelected = true;
                     }
                 }
             }
 
-            // If any file in this folder is selected, include the folder and its .meta file
-            if (hasFileSelected && node.IsDirectory)
+            // If any file in this folder is selected, add the folder's .meta file
+            if (hasFileSelected && node.IsDirectory && node.CommitPath != node.Parent?.CommitPath)
             {
-                if (!selectedFiles.Contains(node.Path))
+                if (notStagedFiles.ContainsKey(node.CommitPath) && !selectedFiles.Contains(node.CommitPath))
                 {
-                    selectedFiles.Add(node.Path); // Add the folder itself
+                    selectedFiles.Add(node.CommitPath);
                 }
 
-                // Add the folder's .meta file if it exists in the system or is staged/unstaged
-                string folderMetaPath = node.Path + ".meta";
-                if (File.Exists(folderMetaPath) || DataManager.GetStatus().NotStaged.ContainsKey(folderMetaPath))
-                {
-                    selectedFiles.Add(folderMetaPath); // Add the folder's .meta file
-                }
+                // Also process parent folders
+                AddUncommittedParentFolders(node.Parent, selectedFiles, notStagedFiles);
             }
 
-            // If it's an empty directory, directly add the folder and its .meta file
-            if (node.IsChecked && node.IsEmptyDirectory)
-            {
-                selectedFiles.Add(node.Path); // Empty folder
+            return hasFileSelected;
+        }
 
-                // Ensure .meta file for the empty folder is added
-                string emptyFolderMetaPath = node.Path + ".meta";
-                if (File.Exists(emptyFolderMetaPath) || DataManager.GetStatus().NotStaged.ContainsKey(emptyFolderMetaPath))
+        private void AddUncommittedParentFolders(ProjectData node, List<string> selectedFiles, Dictionary<string, string> notStagedFiles)
+        {
+            if (node == null || string.IsNullOrEmpty(node.CommitPath))
+            {
+                return; // Stop recursion if no parent
+            }
+
+            // For directories, CommitPath includes .meta
+            if (notStagedFiles.ContainsKey(node.CommitPath) && !selectedFiles.Contains(node.CommitPath))
+            {
+                selectedFiles.Add(node.CommitPath); // Add the .meta file
+            }
+
+            // Recursively add parent folders and their .meta files
+            if (node.Parent != null)
+            {
+                AddUncommittedParentFolders(node.Parent, selectedFiles, notStagedFiles);
+            }
+        }
+
+        private void HandleDeletedFolders(ProjectData node, List<string> selectedFiles)
+        {
+            CLIStatus status = DataManager.GetStatus();
+            var notStagedFiles = status.NotStaged;
+
+            if (node.IsChecked && node.Status == "D") // Check if the node is checked and deleted
+            {
+                // Add the node's commit path if it's in notStagedFiles
+                if (notStagedFiles.ContainsKey(node.CommitPath) && !selectedFiles.Contains(node.CommitPath))
                 {
-                    selectedFiles.Add(emptyFolderMetaPath); // Add the .meta file for empty folder
+                    selectedFiles.Add(node.CommitPath);
+                }
+
+                // Add the corresponding .meta file
+                string metaFilePath = node.CommitPath + ".meta";
+                if (notStagedFiles.ContainsKey(metaFilePath) && !selectedFiles.Contains(metaFilePath))
+                {
+                    selectedFiles.Add(metaFilePath);
+                }
+
+                // Recursively process child nodes to include them
+                if (node.Children != null)
+                {
+                    foreach (var child in node.Children)
+                    {
+                        // Mark the child as checked
+                        child.IsChecked = true;
+
+                        // Recursively call HandleDeletedFolders on the child
+                        HandleDeletedFolders(child, selectedFiles);
+                    }
                 }
             }
         }
-        
-        // Calculate the total changes by dynamically checking both files and meta files.
+
         private int CalculateTotalChanges()
         {
-            string gitIgnoreDirectory = CLIConstants.WorkingDirectory;  // Directory with .gitignore
-
             CLIStatus status = DataManager.GetStatus();
-            int totalChanges = 0; // Total changes counter
+            int totalChanges = 0;
 
-            HashSet<string> processedFiles = new HashSet<string>(); // To track processed base files and avoid counting .meta files
+            // Ensure projectPath is initialized
+            if (string.IsNullOrEmpty(projectPath))
+            {
+                projectPath = Directory.GetParent(Application.dataPath).FullName;
+            }
+
+            HashSet<string> processedFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             if (status?.NotStaged != null)
             {
                 foreach (var entry in status.NotStaged)
                 {
-                    string filePath = entry.Key;
-                    string statusFlag = entry.Value;  // 'A', 'M', 'D'
-                    string fullPath = Path.Combine(gitIgnoreDirectory, filePath); // Full path from git root
+                    string filePath = entry.Key;  // E.g., "Assets/SomeFile.cs"
+                    string statusFlag = entry.Value;
+                    string fullPath = Path.Combine(CLIConstants.WorkingDirectory, filePath);
 
-                    // Skip the .meta file if the associated file has already been processed
+                    // Exclude files outside the Unity project
+                    if (!fullPath.StartsWith(projectPath, StringComparison.OrdinalIgnoreCase))
+                        continue;
+
                     if (filePath.EndsWith(".meta"))
                     {
-                        string baseFilePath = fullPath.Replace(".meta", "");
+                        string baseFilePath = fullPath.Substring(0, fullPath.Length - 5); // Remove ".meta"
 
-                        // If the base file is already processed, skip counting the .meta file
                         if (processedFiles.Contains(baseFilePath))
                         {
-                            continue;
+                            continue; // Skip if the base file is already processed
                         }
                     }
                     else
                     {
-                        // Mark the base file as processed to skip its .meta file later
                         processedFiles.Add(fullPath);
                     }
 
-                    // Process each status type accordingly
-                    switch (statusFlag)
-                    {
-                        case "A":  // Added files
-                        case "M":  // Modified files
-                            if (File.Exists(fullPath))  // Ensure the file exists
-                            {
-                                totalChanges++;  // Count added or modified file
-                            }
-                            break;
-
-                        case "D":  // Deleted files
-                            // Deleted files might not exist in the file system anymore, but we count them
-                            totalChanges++;
-                            break;
-
-                        default:
-                            break;
-                    }
+                    // Increment totalChanges for each unique change within the project
+                    totalChanges++;
                 }
             }
             return totalChanges;
+        }
+        
+        private void OnCommandOutputReceived(string output)
+        {
+            // Update the UI on the main thread
+            EditorApplication.delayCall += () =>
+            {
+                if (outputLogsLabel != null)
+                {
+                    outputLogsLabel.text = output;
+                }
+            };
+        }
+        
+        private void Update()
+        {
+            if (this.docked || this.hasFocus)
+            {
+                CLIWrapper.isWindowActive = true;
+            }
         }
     }
 }
