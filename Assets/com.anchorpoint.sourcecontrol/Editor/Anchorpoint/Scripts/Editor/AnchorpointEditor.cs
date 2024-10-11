@@ -20,7 +20,7 @@ namespace AnchorPoint.Editor
         private ProjectData projectRoot; // Root of the project data tree
         private TreeView treeView;
         private Button commitButton;
-        private Label outputLogsLabel;
+        // private Label outputLogsLabel;
 
         // Global paths
         private string projectPath;      // Absolute path to the Unity project root
@@ -67,7 +67,6 @@ namespace AnchorPoint.Editor
             // Get the commit message text field and commit button
             TextField commitMessageField = root.Q<TextField>("CommitMessageField");
             commitButton = root.Q<Button>("CommitButton");
-            outputLogsLabel = root.Q<Label>("OutputLogs");
             commitButton.SetEnabled(false); // Disable the commit button initially
 
             Label changesLabel = root.Q<Label>("ChangeCountLabel");
@@ -87,7 +86,7 @@ namespace AnchorPoint.Editor
             {
                 string commitMessage = commitMessageField.value;
                 List<string> filesToCommit = GetSelectedFiles();
-
+                
                 if (IsAnyFileSelected())
                 {
                     commitButton.SetEnabled(false);
@@ -141,7 +140,17 @@ namespace AnchorPoint.Editor
                 {
                     var itemData = (ProjectData)checkbox.userData;
                     itemData.IsChecked = evt.newValue;
+
+                    // If the item is a directory, update all its children
+                    if (itemData.IsDirectory && itemData.Children != null && itemData.Children.Any())
+                    {
+                        SetAllCheckboxesRecursive(itemData.Children, evt.newValue);
+                    }
+
                     commitButton.SetEnabled(IsAnyFileSelected()); // Update the commit button state
+
+                    // Refresh all visible items in the tree view
+                    treeView.RefreshItems();
                 });
 
                 var icon = new Image { name = "icon" };
@@ -159,14 +168,13 @@ namespace AnchorPoint.Editor
                 return container;
             };
 
-            // Bind each item in the tree
             treeView.bindItem = (element, index) =>
             {
                 var itemData = treeView.GetItemDataForIndex<ProjectData>(index);
 
                 var checkbox = element.Q<Toggle>("checkbox");
                 checkbox.userData = itemData;
-                checkbox.value = itemData.IsChecked;
+                checkbox.SetValueWithoutNotify(itemData.IsChecked);
 
                 var icon = element.Q<Image>("icon");
                 var nameLabel = element.Q<Label>("name");
@@ -236,6 +244,8 @@ namespace AnchorPoint.Editor
                     PopulateTreeItems(child, childItems, ref idCounter);
                 }
             }
+
+            data.Id = idCounter; // Assign the id to the data
 
             var treeItem = new TreeViewItemData<ProjectData>(idCounter++, data, childItems);
             items.Add(treeItem);
@@ -698,22 +708,40 @@ namespace AnchorPoint.Editor
                     if (!fullPath.StartsWith(projectPath, StringComparison.OrdinalIgnoreCase))
                         continue;
 
+                    // Skip if already processed
+                    if (processedFiles.Contains(fullPath))
+                        continue;
+
                     if (filePath.EndsWith(".meta"))
                     {
                         string baseFilePath = fullPath.Substring(0, fullPath.Length - 5); // Remove ".meta"
 
-                        if (processedFiles.Contains(baseFilePath))
+                        // Determine if the base path is a directory or a file
+                        if (!Path.HasExtension(baseFilePath))
                         {
-                            continue; // Skip if the base file is already processed
+                            // It's a folder's .meta file; skip counting it
+                            continue;
+                        }
+                        else
+                        {
+                            // It's a file's .meta file; proceed
+                            if (processedFiles.Contains(baseFilePath))
+                            {
+                                continue; // Skip if the base file is already processed
+                            }
+                            else
+                            {
+                                processedFiles.Add(baseFilePath);
+                                totalChanges++;
+                            }
                         }
                     }
                     else
                     {
+                        // It's a regular file
                         processedFiles.Add(fullPath);
+                        totalChanges++;
                     }
-
-                    // Increment totalChanges for each unique change within the project
-                    totalChanges++;
                 }
             }
             return totalChanges;
@@ -724,11 +752,32 @@ namespace AnchorPoint.Editor
             // Update the UI on the main thread
             EditorApplication.delayCall += () =>
             {
-                if (outputLogsLabel != null)
-                {
-                    outputLogsLabel.text = output;
-                }
+                commitButton.text = output;
             };
+        }
+        
+        private void RefreshTreeItems(ProjectData itemData)
+        {
+            var idsToRefresh = new List<int>();
+            GetAllItemIds(itemData, idsToRefresh);
+
+            foreach (var id in idsToRefresh)
+            {
+                treeView.RefreshItem(id);
+            }
+        }
+
+        private void GetAllItemIds(ProjectData itemData, List<int> ids)
+        {
+            ids.Add(itemData.Id);
+
+            if (itemData.Children != null && itemData.Children.Any())
+            {
+                foreach (var child in itemData.Children)
+                {
+                    GetAllItemIds(child, ids);
+                }
+            }
         }
         
         private void Update()

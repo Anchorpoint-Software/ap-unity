@@ -177,8 +177,6 @@ namespace AnchorPoint.Wrapper
             Output = string.Empty;
             AnchorPointLogger.Log($"Running Command: {commandText}");
             
-            OnCommandOutputReceived?.Invoke($"Running Command: {command}");
-            
             AddOutput($"<color=green>Running Command: {commandText}</color>");
 
             try
@@ -203,7 +201,7 @@ namespace AnchorPoint.Wrapper
                         if (!string.IsNullOrEmpty(e.Data))
                         {
                             AnchorPointLogger.Log($"Output: {e.Data}");
-                            OnCommandOutputReceived?.Invoke($"{ExtractInformation(e.Data)} . . . ");
+                            OnCommandOutputReceived?.Invoke($"{ExtractInformation(e.Data)}");
                             AddOutput($"\n\nOutput:\n{e.Data}");
                         }
                     };

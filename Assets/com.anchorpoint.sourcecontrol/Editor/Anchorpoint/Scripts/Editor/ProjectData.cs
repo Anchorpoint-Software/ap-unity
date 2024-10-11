@@ -5,6 +5,7 @@ namespace AnchorPoint.Editor
 {
     public class ProjectData
     {
+        public int Id { get; set; }
         public string Name { get; set; }            // Name of the file/folder
         public string Path { get; set; }             // For visual hierarchy
         public string CommitPath { get; set; }      // For commit path
