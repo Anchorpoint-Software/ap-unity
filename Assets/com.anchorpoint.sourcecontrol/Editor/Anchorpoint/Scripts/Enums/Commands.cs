@@ -12,7 +12,8 @@ namespace AnchorPoint.Enums
         LockCreate = 7,
         LockRemove = 8,
         LogFile    = 9,
-        Config     = 10
+        Config     = 10,
+        Revert = 11
     }
     
 }

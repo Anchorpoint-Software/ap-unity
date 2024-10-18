@@ -100,4 +100,20 @@ public static class CLIConfig
         return filePath;
     }
     
+    public static string RevertConfig(params string[] files)
+    {
+        string filePath = CreateConfig();
+        using StreamWriter writer = new(filePath);
+        writer.WriteLine($"cwd=\"{FormattedDirectory}\"");
+        writer.WriteLine("json=true");
+        writer.WriteLine("apiVersion=1");
+        writer.WriteLine("[revert]");
+
+        if (files.Length > 0)
+        {
+            string joinedFiles = string.Join(", ", files.Select(f => $"\"{f}\""));
+            writer.WriteLine($"files=[{joinedFiles}]");
+        }
+        return filePath;
+    }
 }

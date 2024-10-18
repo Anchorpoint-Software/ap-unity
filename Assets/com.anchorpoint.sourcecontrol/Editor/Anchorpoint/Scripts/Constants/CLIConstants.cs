@@ -53,6 +53,26 @@ namespace AnchorPoint.Constants
                 return $"{CWD} --json {APIVersion} sync -m \"{message}\" -f{joinedFiles}";
             } 
         }
+        
+        public static string RevertFiles(params string[] files)
+        {
+            if (files.Length == 0)
+            {
+                // Revert all files in case of no file is selected
+                return $"{CWD} --json {APIVersion} revert";
+            }
+            else if (files.Length > 5)
+            {
+                // Use config file for large number of files
+                return Config(CLIConfig.RevertConfig(files));
+            }
+            else
+            {
+                // Revert specified files
+                string joinedFiles = string.Join(" ", files.Select(f => $"\"{f}\""));
+                return $"{CWD} --json {APIVersion} revert --files {joinedFiles}";
+            }
+        }
 
         public static string UserList => $"{CWD} --json {APIVersion} user list";
 

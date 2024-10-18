@@ -109,6 +109,11 @@ namespace AnchorPoint.Wrapper
                 EnqueueCommand(Command.Sync, CLIConstants.SyncFiles(message, files), true);
             }
         }
+        
+        public static void Revert(params string[] files)
+        {
+            EnqueueCommand(Command.Revert, CLIConstants.RevertFiles(files), true);
+        }
 
         public static void UserList() => EnqueueCommand(Command.UserList, CLIConstants.UserList);
 

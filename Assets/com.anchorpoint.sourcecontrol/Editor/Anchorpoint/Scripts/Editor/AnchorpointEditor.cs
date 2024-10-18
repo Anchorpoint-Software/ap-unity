@@ -19,8 +19,9 @@ namespace AnchorPoint.Editor
         private List<TreeViewItemData<ProjectData>> treeViewItems = new List<TreeViewItemData<ProjectData>>();
         private ProjectData projectRoot; // Root of the project data tree
         private TreeView treeView;
+        private TextField commitMessageField;
         private Button commitButton;
-        // private Label outputLogsLabel;
+        private Button revertButton;
 
         // Global paths
         private string projectPath;      // Absolute path to the Unity project root
@@ -52,9 +53,9 @@ namespace AnchorPoint.Editor
         {
             AnchorpointEditor window = GetWindow<AnchorpointEditor>();
 
-            string assetPath = AssetDatabase.GUIDToAssetPath("anchorPointIcon");
+            string assetPath = AssetDatabase.GUIDToAssetPath(anchorPointIcon);
             Texture2D icon = (Texture2D)AssetDatabase.LoadAssetAtPath<Texture2D>(assetPath);
-            window.titleContent = new GUIContent(" AnchorPoint", icon);
+            window.titleContent = new GUIContent("Anchorpoint", icon);
         }
 
         public void CreateGUI()
@@ -65,9 +66,11 @@ namespace AnchorPoint.Editor
             root.Add(labelFromUXML);
 
             // Get the commit message text field and commit button
-            TextField commitMessageField = root.Q<TextField>("CommitMessageField");
+            commitMessageField = root.Q<TextField>("CommitMessageField");
             commitButton = root.Q<Button>("CommitButton");
             commitButton.SetEnabled(false); // Disable the commit button initially
+            revertButton = root.Q<Button>("Revert");
+            revertButton.SetEnabled(false);
 
             Label changesLabel = root.Q<Label>("ChangeCountLabel");
             int totalChanges = CalculateTotalChanges();
@@ -90,11 +93,30 @@ namespace AnchorPoint.Editor
                 if (IsAnyFileSelected())
                 {
                     commitButton.SetEnabled(false);
+                    revertButton.SetEnabled(false);
+                    commitMessageField.SetEnabled(false);
                     CLIWrapper.Sync(commitMessage, filesToCommit.ToArray());
                 }
                 else
                 {
                     AnchorPointLogger.LogWarning("No files selected for commit.");
+                }
+            };
+            
+            revertButton.clickable.clicked += () =>
+            {
+                List<string> filesToRevert = GetSelectedFiles();
+                
+                if (IsAnyFileSelected())
+                {
+                    commitButton.SetEnabled(false);
+                    revertButton.SetEnabled(false);
+                    commitMessageField.SetEnabled(false);
+                    CLIWrapper.Revert(filesToRevert.ToArray());
+                }
+                else
+                {
+                    AnchorPointLogger.LogWarning("No files selected for revert.");
                 }
             };
 
@@ -148,6 +170,8 @@ namespace AnchorPoint.Editor
                     }
 
                     commitButton.SetEnabled(IsAnyFileSelected()); // Update the commit button state
+                    revertButton.SetEnabled(IsAnyFileSelected()); // Update the revert button state
+                    commitMessageField.SetEnabled(IsAnyFileSelected());
 
                     // Refresh all visible items in the tree view
                     treeView.RefreshItems();
@@ -515,6 +539,8 @@ namespace AnchorPoint.Editor
             {
                 SetAllCheckboxesRecursive(treeViewItems.Select(x => x.data), isChecked);
                 commitButton.SetEnabled(IsAnyFileSelected());
+                revertButton.SetEnabled(IsAnyFileSelected());
+                commitMessageField.SetEnabled(IsAnyFileSelected());
             }
 
             treeView = rootVisualElement.Q<TreeView>("TreeView");
