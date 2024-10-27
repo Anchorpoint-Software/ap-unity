@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 
-namespace AnchorPoint.Wrapper
+namespace Anchorpoint.Wrapper
 {
     public class CommandQueue
     {

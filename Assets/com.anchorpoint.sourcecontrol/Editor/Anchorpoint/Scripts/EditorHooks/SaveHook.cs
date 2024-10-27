@@ -1,10 +1,10 @@
-using AnchorPoint.Logger;
-using AnchorPoint.Wrapper;
+using Anchorpoint.Logger;
+using Anchorpoint.Wrapper;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine.SceneManagement;
 
-namespace AnchorPoint.EditorHooks
+namespace Anchorpoint.EditorHooks
 {
     [InitializeOnLoad]
     public class SaveHook
@@ -25,7 +25,7 @@ namespace AnchorPoint.EditorHooks
             if (!CLIWrapper.isWindowActive) return;
             CLIWrapper.isWindowActive = false;
             CLIWrapper.Status();
-            AnchorPointLogger.Log("Project changed: Status command triggered.");
+            AnchorpointLogger.Log("Project changed: Status command triggered.");
         }
 
         private static void OnProjectChanged(bool obj)
@@ -33,7 +33,7 @@ namespace AnchorPoint.EditorHooks
             if (!CLIWrapper.isWindowActive) return;
             CLIWrapper.isWindowActive = false;
             CLIWrapper.Status();
-            AnchorPointLogger.Log("Project changed: Status command triggered.");
+            AnchorpointLogger.Log("Project changed: Status command triggered.");
         }
 
         private static void OnProjectChanged()
@@ -41,7 +41,7 @@ namespace AnchorPoint.EditorHooks
             if (!CLIWrapper.isWindowActive) return;
             CLIWrapper.isWindowActive = false;
             CLIWrapper.Status();
-            AnchorPointLogger.Log("Project changed: Status command triggered.");
+            AnchorpointLogger.Log("Project changed: Status command triggered.");
         }
 
         private static void DeregisterEvents()
@@ -51,7 +51,7 @@ namespace AnchorPoint.EditorHooks
             EditorApplication.focusChanged -= OnProjectChanged;
             EditorSceneManager.sceneSaved -= OnProjectChanged;
 
-            AnchorPointLogger.Log("Events deregistered.");
+            AnchorpointLogger.Log("Events deregistered.");
         }
     }
 }

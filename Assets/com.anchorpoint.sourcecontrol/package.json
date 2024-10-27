@@ -1,7 +1,7 @@
 {
   "name": "com.anchorpoint.sourcecontrol",
   "version": "1.0.0",
-  "displayName": "AnchorPoint",
+  "displayName": "Anchorpoint",
   "description": "A package that connects AnchorPoint app with Unity",
   "unity": "2018.1",
   "author": {

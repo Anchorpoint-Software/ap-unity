@@ -1,9 +1,9 @@
 using System.Runtime.CompilerServices;
 using UnityEngine;
 
-namespace AnchorPoint.Logger
+namespace Anchorpoint.Logger
 {
-    public static class AnchorPointLogger
+    public static class AnchorpointLogger
     {
         public static bool EnableLogging = true; // You can toggle this based on environment
 

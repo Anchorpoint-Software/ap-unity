@@ -2,7 +2,7 @@ using System.IO;
 using UnityEngine;
 using System.Linq;
 using UnityEditor;
-using AnchorPoint.Constants;
+using Anchorpoint.Constants;
 
 public static class CLIConfig
 {

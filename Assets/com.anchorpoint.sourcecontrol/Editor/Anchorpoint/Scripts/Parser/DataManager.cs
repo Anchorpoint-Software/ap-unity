@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace AnchorPoint.Parser
+namespace Anchorpoint.Parser
 {
     public static class DataManager
     {

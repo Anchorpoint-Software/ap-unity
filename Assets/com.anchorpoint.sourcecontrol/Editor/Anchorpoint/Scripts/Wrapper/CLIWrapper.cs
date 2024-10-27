@@ -1,13 +1,13 @@
 using System;
-using AnchorPoint.Enums;
+using Anchorpoint.Enums;
 using System.Diagnostics;
-using AnchorPoint.Parser;
-using AnchorPoint.Constants;
+using Anchorpoint.Parser;
+using Anchorpoint.Constants;
 using System.Collections.Generic;
-using AnchorPoint.Logger;
+using Anchorpoint.Logger;
 using UnityEditor;
 
-namespace AnchorPoint.Wrapper
+namespace Anchorpoint.Wrapper
 {
     public delegate void Callback();
 
@@ -25,7 +25,7 @@ namespace AnchorPoint.Wrapper
         public static bool isWindowActive = false;
             
             
-        public static void CLIPath() => AnchorPointLogger.Log(CLIConstants.CLIPath);
+        public static void CLIPath() => AnchorpointLogger.Log(CLIConstants.CLIPath);
 
         // Updated Status command to run on Unity main thread, but only after other commands
         public static void Status()
@@ -57,7 +57,7 @@ namespace AnchorPoint.Wrapper
             if (string.IsNullOrEmpty(message))
             {
                 Output = string.Empty;
-                AnchorPointLogger.LogWarning("Commit Message empty!");
+                AnchorpointLogger.LogWarning("Commit Message empty!");
                 AddOutput($"\n\n<color=red>Commit Message empty!</color>");
             }
             else
@@ -71,7 +71,7 @@ namespace AnchorPoint.Wrapper
             if (string.IsNullOrEmpty(message))
             {
                 Output = string.Empty;
-                AnchorPointLogger.LogWarning("Commit Message empty!");
+                AnchorpointLogger.LogWarning("Commit Message empty!");
                 AddOutput($"\n\n<color=red>Commit Message empty!</color>");
             }
             else
@@ -87,7 +87,7 @@ namespace AnchorPoint.Wrapper
             if (string.IsNullOrEmpty(message))
             {
                 Output = string.Empty;
-                AnchorPointLogger.LogWarning("Commit Message empty!");
+                AnchorpointLogger.LogWarning("Commit Message empty!");
                 AddOutput($"\n\n<color=red>Commit Message empty!</color>");
             }
             else
@@ -101,7 +101,7 @@ namespace AnchorPoint.Wrapper
             if (string.IsNullOrEmpty(message))
             {
                 Output = string.Empty;
-                AnchorPointLogger.LogWarning("Commit Message empty!");
+                AnchorpointLogger.LogWarning("Commit Message empty!");
                 AddOutput($"\n\n<color=red>Commit Message empty!</color>");
             }
             else
@@ -129,7 +129,7 @@ namespace AnchorPoint.Wrapper
                 {
                     if (DataManager.GetLockList().ContainsKey(file))
                     {
-                        AnchorPointLogger.Log($"File {file} was already locked!");
+                        AnchorpointLogger.Log($"File {file} was already locked!");
                         fileList.Remove(file);
                     }
                 }
@@ -137,7 +137,7 @@ namespace AnchorPoint.Wrapper
                 if (fileList.Count > 0)
                     RunCommand(Command.LockCreate, CLIConstants.LockCreate(keep, fileList.ToArray()));
                 else
-                    AnchorPointLogger.Log("No files to Lock!");
+                    AnchorpointLogger.Log("No files to Lock!");
             });
         }
 
@@ -158,7 +158,7 @@ namespace AnchorPoint.Wrapper
                 if (fileList.Count > 0)
                     RunCommand(Command.LockRemove, CLIConstants.LockRemove(fileList.ToArray()));
                 else
-                    AnchorPointLogger.Log("No files to Unlock!");
+                    AnchorpointLogger.Log("No files to Unlock!");
             });
         }
 
@@ -180,7 +180,7 @@ namespace AnchorPoint.Wrapper
         private static void RunCommand(Command command, string commandText, bool sequential = false, Callback callback = null)
         {
             Output = string.Empty;
-            AnchorPointLogger.Log($"Running Command: {commandText}");
+            AnchorpointLogger.Log($"Running Command: {commandText}");
             
             AddOutput($"<color=green>Running Command: {commandText}</color>");
 
@@ -205,7 +205,7 @@ namespace AnchorPoint.Wrapper
                     {
                         if (!string.IsNullOrEmpty(e.Data))
                         {
-                            AnchorPointLogger.Log($"Output: {e.Data}");
+                            AnchorpointLogger.Log($"Output: {e.Data}");
                             OnCommandOutputReceived?.Invoke($"{ExtractInformation(e.Data)}");
                             AddOutput($"\n\nOutput:\n{e.Data}");
                         }
@@ -217,7 +217,7 @@ namespace AnchorPoint.Wrapper
                     string errorOutput = process.StandardError.ReadToEnd();
                     if (!string.IsNullOrEmpty(errorOutput))
                     {
-                        AnchorPointLogger.Log($"Output: {errorOutput}");
+                        AnchorpointLogger.Log($"Output: {errorOutput}");
                         OnCommandOutputReceived?.Invoke($"Output: {errorOutput}");
                         AddOutput($"\n\nOutput:\n{errorOutput}");
                         ProcessOutput(command, errorOutput, callback);
@@ -225,7 +225,7 @@ namespace AnchorPoint.Wrapper
                 }
 
                 process.WaitForExit();
-                AnchorPointLogger.Log($"{command} Command Completed");
+                AnchorpointLogger.Log($"{command} Command Completed");
                 OnCommandOutputReceived?.Invoke($"{command} Command Completed");
                 AddOutput($"\n\n{command} Command Completed");
 
@@ -240,7 +240,7 @@ namespace AnchorPoint.Wrapper
             }
             catch (Exception ex)
             {
-                AnchorPointLogger.LogError($"Error running command: {ex.Message}");
+                AnchorpointLogger.LogError($"Error running command: {ex.Message}");
             }
         }
 
@@ -306,7 +306,7 @@ namespace AnchorPoint.Wrapper
                     }
                     else
                     {
-                        AnchorPointLogger.LogError("Failed to parse output as CLI Status or output was empty.");
+                        AnchorpointLogger.LogError("Failed to parse output as CLI Status or output was empty.");
                     }
                     break;
                 case Command.LockList:
@@ -319,7 +319,7 @@ namespace AnchorPoint.Wrapper
                     }
                     else
                     {
-                        AnchorPointLogger.LogError("Failed to parse output as CLILockFile or output was empty.");
+                        AnchorpointLogger.LogError("Failed to parse output as CLILockFile or output was empty.");
                     }
                     break;
             }

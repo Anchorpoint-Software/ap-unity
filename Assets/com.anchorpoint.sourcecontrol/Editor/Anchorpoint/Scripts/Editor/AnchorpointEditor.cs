@@ -2,15 +2,15 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using AnchorPoint.Constants;
-using AnchorPoint.Logger;
-using AnchorPoint.Parser;
-using AnchorPoint.Wrapper;
+using Anchorpoint.Constants;
+using Anchorpoint.Logger;
+using Anchorpoint.Parser;
+using Anchorpoint.Wrapper;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-namespace AnchorPoint.Editor
+namespace Anchorpoint.Editor
 {
     public class AnchorpointEditor : EditorWindow
     {
@@ -99,7 +99,7 @@ namespace AnchorPoint.Editor
                 }
                 else
                 {
-                    AnchorPointLogger.LogWarning("No files selected for commit.");
+                    AnchorpointLogger.LogWarning("No files selected for commit.");
                 }
             };
             
@@ -112,11 +112,12 @@ namespace AnchorPoint.Editor
                     commitButton.SetEnabled(false);
                     revertButton.SetEnabled(false);
                     commitMessageField.SetEnabled(false);
+                    revertButton.text = "Reverting...";
                     CLIWrapper.Revert(filesToRevert.ToArray());
                 }
                 else
                 {
-                    AnchorPointLogger.LogWarning("No files selected for revert.");
+                    AnchorpointLogger.LogWarning("No files selected for revert.");
                 }
             };
 
@@ -127,7 +128,7 @@ namespace AnchorPoint.Editor
         {
             if (treeView == null)
             {
-                AnchorPointLogger.LogError("TreeView is null!");
+                AnchorpointLogger.LogError("TreeView is null!");
                 return;
             }
 
@@ -135,12 +136,12 @@ namespace AnchorPoint.Editor
 
             if (projectRoot == null || projectRoot.Children.Count == 0)
             {
-                AnchorPointLogger.LogWarning("No project structure data found or children are empty.");
+                AnchorpointLogger.LogWarning("No project structure data found or children are empty.");
                 return;
             }
             else
             {
-                AnchorPointLogger.Log($"Project Root found: {projectRoot.Name}, Child Count: {projectRoot.Children.Count}");
+                AnchorpointLogger.Log($"Project Root found: {projectRoot.Name}, Child Count: {projectRoot.Children.Count}");
             }
 
             treeViewItems.Clear();  // Clear any previous data
@@ -392,7 +393,7 @@ namespace AnchorPoint.Editor
             CLIStatus status = DataManager.GetStatus();
             if (status == null)
             {
-                AnchorPointLogger.LogError("CLIStatus is null");
+                AnchorpointLogger.LogError("CLIStatus is null");
                 CLIWrapper.Status();
                 return new ProjectData { Name = "No CLI Data" };
             }
@@ -779,7 +780,16 @@ namespace AnchorPoint.Editor
             EditorApplication.delayCall += () =>
             {
                 commitButton.text = output;
+                if (output == "Status Command Completed")
+                {
+                    OnRevertComplete();
+                }
             };
+        }
+        
+        private void OnRevertComplete()
+        {
+            revertButton.text = "Revert";
         }
         
         private void RefreshTreeItems(ProjectData itemData)

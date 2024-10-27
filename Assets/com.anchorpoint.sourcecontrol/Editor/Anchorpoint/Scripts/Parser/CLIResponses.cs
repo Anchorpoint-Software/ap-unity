@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using Newtonsoft.Json;
 
-namespace AnchorPoint.Parser
+namespace Anchorpoint.Parser
 {
     [System.Serializable]
     public class CLIStatus

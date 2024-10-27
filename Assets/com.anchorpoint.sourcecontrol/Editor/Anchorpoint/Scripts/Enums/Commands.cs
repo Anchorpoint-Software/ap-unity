@@ -1,4 +1,4 @@
-namespace AnchorPoint.Enums
+namespace Anchorpoint.Enums
 {
     public enum Command
     {

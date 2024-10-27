@@ -1,7 +1,7 @@
 using UnityEngine;
 using Newtonsoft.Json;
 
-namespace AnchorPoint.Parser
+namespace Anchorpoint.Parser
 {
     public static class CLIJsonParser
     {

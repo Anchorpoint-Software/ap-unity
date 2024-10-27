@@ -5,7 +5,7 @@ using UnityEditor;
 using System.Text.RegularExpressions;
 using UnityEngine;
 
-namespace AnchorPoint.Constants
+namespace Anchorpoint.Constants
 {
     public static class CLIConstants
     {
