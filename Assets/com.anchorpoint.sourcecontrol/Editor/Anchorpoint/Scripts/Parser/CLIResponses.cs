@@ -31,11 +31,22 @@ namespace Anchorpoint.Parser
     [System.Serializable]
     public class CLIUser
     {
+        [JsonProperty("id")]
         public string Id;
+
+        [JsonProperty("email")]
         public string Email;
+
+        [JsonProperty("name")]
         public string Name;
+
+        [JsonProperty("picture")]
         public string Picture;
+
+        [JsonProperty("level")]
         public string Level;
+
+        [JsonProperty("pending")]
         public string Pending;
     }
 
