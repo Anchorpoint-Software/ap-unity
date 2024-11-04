@@ -20,8 +20,6 @@ namespace Anchorpoint.Editor
         {
             // Run the UserList command to get the current user
             CLIWrapper.GetCurrentUser();
-            
-            Debug.LogError("GetCurrentUser");
         }
 
         // This method is automatically called by Unity before assets are saved
@@ -33,9 +31,6 @@ namespace Anchorpoint.Editor
             // Get the current user's email from DataManager
             CLIUser currentUser = DataManager.GetCurrentUser();
             
-            // Debug.LogError(currentUser.Name);
-            // Debug.LogError(currentUser.Email);
-
             // If currentUser is null, the UserList command might not have completed yet
             if (currentUser == null)
             {
@@ -44,8 +39,6 @@ namespace Anchorpoint.Editor
             }
 
             string currentUserEmail = currentUser.Email;
-            
-            Debug.LogError(currentUserEmail);
 
             // Prepare a list for paths that are allowed to be saved
             List<string> allowedSavePaths = new List<string>();
@@ -54,22 +47,18 @@ namespace Anchorpoint.Editor
             {
                 // Convert the path dynamically to match the commit path format
                 string commitPath = GetCommitPath(path);
-                
 
                 if (lockedFiles != null && lockedFiles.TryGetValue(commitPath, out string lockingUserEmail))
                 {
                     // Check if the locking user is not the current user
                     if (!string.Equals(lockingUserEmail, currentUserEmail, StringComparison.OrdinalIgnoreCase))
                     {
-                        // Notify the user with the original path, as it is user-facing
-                        bool okClicked = EditorUtility.DisplayDialog("Read-Only File",
-                            $"{path} is locked by another user and cannot be saved.", "OK", "Cancel");
+                        // Notify the user with a single "OK" button
+                        EditorUtility.DisplayDialog("Read-Only File",
+                            $"{path} is locked by another user and cannot be saved.", "OK");
 
-                        // If "Cancel" is clicked, prevent modification
-                        if (!okClicked)
-                        {
-                            return new string[] { };  // Prevent the asset from being saved
-                        }
+                        // Prevent the asset from being saved
+                        return new string[] { };  
                     }
                 }
 

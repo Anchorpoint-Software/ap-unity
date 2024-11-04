@@ -40,6 +40,15 @@ namespace Anchorpoint.Wrapper
                 EditorApplication.update += RunStatusCommandOnMainThread;
             }
         }
+
+        private static void RunStatusCommandOnMainThread()
+        {
+            // Ensure this runs once
+            EditorApplication.update -= RunStatusCommandOnMainThread;
+
+            // Execute the Status command on the main thread
+            RunCommand(Command.Status, CLIConstants.Status);
+        }
         
         public static void GetCurrentUser()
         {
@@ -53,15 +62,6 @@ namespace Anchorpoint.Wrapper
 
             // Execute the UserList command on the main thread
             RunCommand(Command.UserList, CLIConstants.UserList);
-        }
-
-        private static void RunStatusCommandOnMainThread()
-        {
-            // Ensure this runs once
-            EditorApplication.update -= RunStatusCommandOnMainThread;
-
-            // Execute the Status command on the main thread
-            RunCommand(Command.Status, CLIConstants.Status);
         }
 
         public static void Pull() => EnqueueCommand(Command.Pull, CLIConstants.Pull, true);
@@ -345,6 +345,8 @@ namespace Anchorpoint.Wrapper
                     List<CLIUser> users = CLIJsonParser.ParseJson<List<CLIUser>>(jsonOutput);
                     if (users != null && users.Count > 0)
                     {
+                        
+                        AnchorpointLogger.LogError("UpdateData User Lock");
                         // The current user is the Second in the list
                         DataManager.UpdateCurrentUser(users[1]);
                         callback?.Invoke();
