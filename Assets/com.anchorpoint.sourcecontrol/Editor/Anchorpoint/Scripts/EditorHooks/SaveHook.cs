@@ -24,7 +24,7 @@ namespace Anchorpoint.EditorHooks
 
         private static void OnProjectChanged(Scene scene)
         {
-            if (!CLIWrapper.isWindowActive) return;
+            // if (!CLIWrapper.isWindowActive) return;
             CLIWrapper.isWindowActive = false;
             CLIWrapper.Status();
             AnchorpointLogger.Log("Project changed: Status command triggered.");
@@ -32,7 +32,7 @@ namespace Anchorpoint.EditorHooks
 
         private static void OnProjectChanged(bool obj)
         {
-            if (!CLIWrapper.isWindowActive) return;
+            // if (!CLIWrapper.isWindowActive) return;
             CLIWrapper.isWindowActive = false;
             CLIWrapper.Status();
             AnchorpointLogger.Log("Project changed: Status command triggered.");
@@ -40,7 +40,7 @@ namespace Anchorpoint.EditorHooks
 
         private static void OnProjectChanged()
         {
-            if (!CLIWrapper.isWindowActive) return;
+            // if (!CLIWrapper.isWindowActive) return;
             CLIWrapper.isWindowActive = false;
             CLIWrapper.Status();
             AnchorpointLogger.Log("Project changed: Status command triggered.");
