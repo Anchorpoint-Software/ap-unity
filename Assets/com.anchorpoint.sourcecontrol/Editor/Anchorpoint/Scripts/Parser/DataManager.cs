@@ -78,7 +78,7 @@ namespace Anchorpoint.Parser
         public static void UpdateCurrentUser(CLIUser user)
         {
             currentUser = user;
-            AnchorpointLogger.LogError("The current user is: " +currentUser);
+            AnchorpointLogger.LogError("The current user is: " +currentUser.Email);
         }
 
         public static CLIUser GetCurrentUser()
