@@ -11,6 +11,8 @@ namespace Anchorpoint.Parser
         private static Dictionary<string, string> _lockFiles = new();
         
         private static CLIUser currentUser;
+        private static List<CLIUser> userList;
+        
 
         public static CLIStatus GetStatus()
         {
@@ -78,12 +80,21 @@ namespace Anchorpoint.Parser
         public static void UpdateCurrentUser(CLIUser user)
         {
             currentUser = user;
-            AnchorpointLogger.LogError("The current user is: " +currentUser.Email);
         }
 
         public static CLIUser GetCurrentUser()
         {
             return currentUser;
+        }
+        
+        public static void UpdateUserList(List<CLIUser> users)
+        {
+            userList = users;
+        }
+
+        public static List<CLIUser> GetUserList()
+        {
+            return userList;
         }
     }
 }

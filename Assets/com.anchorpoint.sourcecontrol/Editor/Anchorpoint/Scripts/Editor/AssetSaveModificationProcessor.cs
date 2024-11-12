@@ -30,11 +30,10 @@ namespace Anchorpoint.Editor
 
             // Get the current user's email from DataManager
             CLIUser currentUser = DataManager.GetCurrentUser();
-            
+                
             // If currentUser is null, the UserList command might not have completed yet
             if (currentUser == null)
             {
-                // Optionally, you can wait or handle this case appropriately
                 AnchorpointLogger.LogWarning("Current user not retrieved yet.");
             }
 
@@ -55,7 +54,7 @@ namespace Anchorpoint.Editor
                     {
                         // Notify the user with a single "OK" button
                         EditorUtility.DisplayDialog("Read-Only File",
-                            $"{path} is locked by another user and cannot be saved.", "OK");
+                            $"{path} is locked by {GetLockedUserName(lockingUserEmail)} and cannot be saved.", "OK");
 
                         // Prevent the asset from being saved
                         return new string[] { };  
@@ -74,6 +73,13 @@ namespace Anchorpoint.Editor
         private static void RefreshLockedFiles()
         {
             lockedFiles = CLIWrapper.GetLockedFiles();
+        }
+
+        // Get locking file user name
+        private static string GetLockedUserName(string lockingUserEmail)
+        {
+            CLIUser cliUser = DataManager.GetUserList().Find(user => user.Email == lockingUserEmail);
+            return !string.IsNullOrEmpty(cliUser?.Name) ? cliUser.Name : "Unknown User";
         }
 
         private static string GetCommitPath(string path)

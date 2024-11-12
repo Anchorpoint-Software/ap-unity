@@ -129,8 +129,6 @@ namespace Anchorpoint.Wrapper
             EnqueueCommand(Command.Revert, CLIConstants.RevertFiles(files), true);
         }
 
-        public static void UserList() => EnqueueCommand(Command.UserList, CLIConstants.UserList);
-
         // public static void LockList() => EnqueueCommand(Command.LockList, CLIConstants.LockList);
 
         public static void LockCreate(bool keep, params string[] files)
@@ -345,7 +343,8 @@ namespace Anchorpoint.Wrapper
                     List<CLIUser> users = CLIJsonParser.ParseJson<List<CLIUser>>(jsonOutput);
                     if (users != null && users.Count > 0)
                     {
-                        AnchorpointLogger.LogError("UpdateData User Lock");
+                        // Updating the User List
+                        DataManager.UpdateUserList(users);
                         // Find the current user where "current" is "1"
                         CLIUser currentUser = users.Find(user => user.Current == "1");
                         if (currentUser != null)
