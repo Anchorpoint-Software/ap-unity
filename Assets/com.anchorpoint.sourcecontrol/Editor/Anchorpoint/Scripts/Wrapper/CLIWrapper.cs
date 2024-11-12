@@ -345,11 +345,18 @@ namespace Anchorpoint.Wrapper
                     List<CLIUser> users = CLIJsonParser.ParseJson<List<CLIUser>>(jsonOutput);
                     if (users != null && users.Count > 0)
                     {
-                        
                         AnchorpointLogger.LogError("UpdateData User Lock");
-                        // The current user is the Second in the list
-                        DataManager.UpdateCurrentUser(users[1]);
-                        callback?.Invoke();
+                        // Find the current user where "current" is "1"
+                        CLIUser currentUser = users.Find(user => user.Current == "1");
+                        if (currentUser != null)
+                        {
+                            DataManager.UpdateCurrentUser(currentUser);
+                            callback?.Invoke();
+                        }
+                        else
+                        {
+                            AnchorpointLogger.LogError("No current user found in user list.");
+                        }
                     }
                     else
                     {

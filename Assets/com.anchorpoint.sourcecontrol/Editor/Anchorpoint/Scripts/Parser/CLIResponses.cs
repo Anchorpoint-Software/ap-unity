@@ -48,6 +48,9 @@ namespace Anchorpoint.Parser
 
         [JsonProperty("pending")]
         public string Pending;
+
+        [JsonProperty("current")]
+        public string Current;
     }
 
     [System.Serializable]
