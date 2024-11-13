@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Anchorpoint.Logger;
 
 namespace Anchorpoint.Parser
 {
@@ -8,16 +9,15 @@ namespace Anchorpoint.Parser
         private static List<CLIError> errors = new List<CLIError>();
 
         private static Dictionary<string, string> _lockFiles = new();
+        
+        private static CLIUser currentUser;
+        private static List<CLIUser> userList;
+        
 
         public static CLIStatus GetStatus()
         {
             return _status;
         }
-
-        // public static void UpdateCurrentStatus(CLIStatus status)
-        // {
-        //     currentStatus = status;
-        // }
 
         public static void AddError(CLIError error)
         {
@@ -34,34 +34,67 @@ namespace Anchorpoint.Parser
             errors.Clear();
         }
 
-        // public static void ResetStatus()
-        // {
-        //     currentStatus = null;
-        // }
-
         public static void UpdateData<T>(T data) where T : class
         {
             switch (data)
             {
-                case CLIStatus staus:
-                    _status = staus;
-                break;
-                case List<Dictionary<string, string>> temp:
-                    _lockFiles = new();
-                    foreach (Dictionary<string, string> fileData in temp)
+                case CLIStatus status:
+                    // Update the CLI status
+                    _status = status;
+
+                    // Update the lock files from the CLI status
+                    if (_status.LockedFiles != null)
                     {
-                        foreach (KeyValuePair<string, string> entry in fileData)
-                        {
-                            _lockFiles.Add(entry.Key, entry.Value);
-                        }
+                        _lockFiles = new Dictionary<string, string>(_status.LockedFiles);
                     }
+                    else
+                    {
+                        _lockFiles.Clear();
+                    }
+                    break;
+
+                default:
+                    AnchorpointLogger.LogError("Unsupported data type in UpdateData.");
                     break;
             }
         }
         
+        public static void UpdateLockList(List<Dictionary<string, string>> lockList)
+        {
+            _lockFiles.Clear();
+            foreach (var lockInfo in lockList)
+            {
+                if (lockInfo.TryGetValue("filePath", out string filePath) &&
+                    lockInfo.TryGetValue("email", out string email))
+                {
+                    _lockFiles[filePath] = email;
+                }
+            }
+        }
+
         public static Dictionary<string, string> GetLockList()
         {
             return _lockFiles;
+        }
+        
+        public static void UpdateCurrentUser(CLIUser user)
+        {
+            currentUser = user;
+        }
+
+        public static CLIUser GetCurrentUser()
+        {
+            return currentUser;
+        }
+        
+        public static void UpdateUserList(List<CLIUser> users)
+        {
+            userList = users;
+        }
+
+        public static List<CLIUser> GetUserList()
+        {
+            return userList;
         }
     }
 }

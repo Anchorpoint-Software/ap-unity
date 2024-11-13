@@ -44,6 +44,7 @@ namespace Anchorpoint.Editor
 
         private void OnEditorUpdate()
         {
+            if (!CLIWrapper.isWindowActive) return;
             rootVisualElement.Clear();
             CreateGUI();
         }

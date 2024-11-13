@@ -49,6 +49,20 @@ namespace Anchorpoint.Wrapper
             // Execute the Status command on the main thread
             RunCommand(Command.Status, CLIConstants.Status);
         }
+        
+        public static void GetCurrentUser()
+        {
+            EditorApplication.update += RunUserListCommandOnMainThread;
+        }
+
+        private static void RunUserListCommandOnMainThread()
+        {
+            // Ensure this runs once
+            EditorApplication.update -= RunUserListCommandOnMainThread;
+
+            // Execute the UserList command on the main thread
+            RunCommand(Command.UserList, CLIConstants.UserList);
+        }
 
         public static void Pull() => EnqueueCommand(Command.Pull, CLIConstants.Pull, true);
 
@@ -115,9 +129,7 @@ namespace Anchorpoint.Wrapper
             EnqueueCommand(Command.Revert, CLIConstants.RevertFiles(files), true);
         }
 
-        public static void UserList() => EnqueueCommand(Command.UserList, CLIConstants.UserList);
-
-        public static void LockList() => EnqueueCommand(Command.LockList, CLIConstants.LockList);
+        // public static void LockList() => EnqueueCommand(Command.LockList, CLIConstants.LockList);
 
         public static void LockCreate(bool keep, params string[] files)
         {
@@ -160,6 +172,11 @@ namespace Anchorpoint.Wrapper
                 else
                     AnchorpointLogger.Log("No files to Unlock!");
             });
+        }
+        
+        public static Dictionary<string, string> GetLockedFiles()
+        {
+            return DataManager.GetLockList();
         }
 
         public static void LogFile(string file, int numberOfCommits = 5) => RunCommand(Command.LogFile, CLIConstants.LogFile(file, numberOfCommits));
@@ -320,6 +337,29 @@ namespace Anchorpoint.Wrapper
                     else
                     {
                         AnchorpointLogger.LogError("Failed to parse output as CLILockFile or output was empty.");
+                    }
+                    break;
+                case Command.UserList:
+                    List<CLIUser> users = CLIJsonParser.ParseJson<List<CLIUser>>(jsonOutput);
+                    if (users != null && users.Count > 0)
+                    {
+                        // Updating the User List
+                        DataManager.UpdateUserList(users);
+                        // Find the current user where "current" is "1"
+                        CLIUser currentUser = users.Find(user => user.Current == "1");
+                        if (currentUser != null)
+                        {
+                            DataManager.UpdateCurrentUser(currentUser);
+                            callback?.Invoke();
+                        }
+                        else
+                        {
+                            AnchorpointLogger.LogError("No current user found in user list.");
+                        }
+                    }
+                    else
+                    {
+                        AnchorpointLogger.LogError("Failed to parse output as CLIUser or output was empty.");
                     }
                     break;
             }
