@@ -38,7 +38,7 @@ namespace Anchorpoint.Editor
             }
 
             string currentUserEmail = currentUser.Email;
-
+            
             // Prepare a list for paths that are allowed to be saved
             List<string> allowedSavePaths = new List<string>();
 
