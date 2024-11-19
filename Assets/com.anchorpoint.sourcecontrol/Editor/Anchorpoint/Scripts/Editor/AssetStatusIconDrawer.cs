@@ -135,13 +135,14 @@ namespace Anchorpoint.Editor
             // Draw the icon next to the asset
             if (icon != null)
             {
-                float iconSize = 20f;
-                float padding = 2f;
+                float iconSize = 16f;
+                float topPadding = 2f;
+                float bottomPadding = 16f;
 
                 // Adjust the iconRect to be positioned at the top right corner
                 Rect iconRect = new Rect(
-                    selectionRect.x + selectionRect.width - iconSize - padding,
-                    selectionRect.y + padding,  // Positioning at the top of the asset
+                    selectionRect.x + selectionRect.width - iconSize - topPadding,
+                    selectionRect.y + selectionRect.height - iconSize - bottomPadding,  // Positioning at the top of the asset
                     iconSize,
                     iconSize
                 );
