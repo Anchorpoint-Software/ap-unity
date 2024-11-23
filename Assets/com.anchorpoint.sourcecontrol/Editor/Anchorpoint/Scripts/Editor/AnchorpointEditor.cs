@@ -780,7 +780,11 @@ namespace Anchorpoint.Editor
             // Update the UI on the main thread
             EditorApplication.delayCall += () =>
             {
-                commitButton.text = output;
+                if (commitButton != null)
+                {
+                    commitButton.text = output;
+                }
+                
                 if (output == "Status Command Completed")
                 {
                     OnRevertComplete();
@@ -789,8 +793,11 @@ namespace Anchorpoint.Editor
         }
         
         private void OnRevertComplete()
-        {
-            revertButton.text = "Revert";
+        { 
+            if (revertButton != null)
+            {
+                revertButton.text = "Revert";
+            }
         }
         
         private void RefreshTreeItems(ProjectData itemData)

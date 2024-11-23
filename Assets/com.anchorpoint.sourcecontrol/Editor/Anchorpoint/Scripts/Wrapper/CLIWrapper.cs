@@ -325,9 +325,11 @@ namespace Anchorpoint.Wrapper
                     {
                         AnchorpointLogger.LogError("Failed to parse output as CLI Status or output was empty.");
                     }
+
                     break;
                 case Command.LockList:
-                    List<Dictionary<string, string>> fileDataList = CLIJsonParser.ParseJson<List<Dictionary<string, string>>>(jsonOutput);
+                    List<Dictionary<string, string>> fileDataList =
+                        CLIJsonParser.ParseJson<List<Dictionary<string, string>>>(jsonOutput);
 
                     if (fileDataList != null)
                     {
@@ -338,10 +340,11 @@ namespace Anchorpoint.Wrapper
                     {
                         AnchorpointLogger.LogError("Failed to parse output as CLILockFile or output was empty.");
                     }
+
                     break;
                 case Command.UserList:
                     List<CLIUser> users = CLIJsonParser.ParseJson<List<CLIUser>>(jsonOutput);
-                    if (users != null && users.Count > 0)
+                    if (users != null)
                     {
                         // Updating the User List
                         DataManager.UpdateUserList(users);
@@ -361,6 +364,7 @@ namespace Anchorpoint.Wrapper
                     {
                         AnchorpointLogger.LogError("Failed to parse output as CLIUser or output was empty.");
                     }
+
                     break;
             }
         }
