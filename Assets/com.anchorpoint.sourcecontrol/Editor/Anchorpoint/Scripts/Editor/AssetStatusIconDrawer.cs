@@ -41,6 +41,11 @@ namespace Anchorpoint.Editor
 
         private static void OnProjectWindowItemOnGUI(string guid, Rect selectionRect)
         {
+            if (IsOneColumnLayout(selectionRect))
+            {
+                return;
+            }
+
             // Get the asset path from the GUID
             string path = AssetDatabase.GUIDToAssetPath(guid);
 
@@ -202,6 +207,12 @@ namespace Anchorpoint.Editor
             RefreshStatusData();
             // Repaint the Project window to reflect updated icons
             EditorApplication.RepaintProjectWindow();
+        }
+        
+        private static bool IsOneColumnLayout(Rect selectionRect)
+        {
+            // Determine if the selectionRect spans the entire width of the Project window
+            return selectionRect.width > 100;
         }
     }
 }
