@@ -9,6 +9,9 @@
     "email": "contact@anchorpoint.app",
     "url": "https://www.anchorpoint.app/"
   },
+  "changelogURL": "https://www.anchorpoint.app/releases",
+  "documentationUrl": "https://docs.anchorpoint.app/docs/version-control/first-steps/unity/",
+  "licensesUrl": "https://www.anchorpoint.app/policies/eula",
   "keywords": [
     "anchorpoint",
     "Anchor Point",
