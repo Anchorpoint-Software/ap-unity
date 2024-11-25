@@ -27,7 +27,10 @@ namespace Anchorpoint.Editor
         private string projectPath;      // Absolute path to the Unity project root
         private const string assetsFolderName = "Assets";
         private string assetsPath;       // Absolute path to the Assets folder
-
+        private string btnStr;
+        
+        private bool inProcess = false;      // Flag to check is if some commit/revert is in process
+        
         private const string anchorPointIcon = "d8e0264a1e3a54b09aaf9e7ac62d4e1f";
 
         private void OnEnable()
@@ -93,9 +96,11 @@ namespace Anchorpoint.Editor
                 
                 if (IsAnyFileSelected())
                 {
+                    inProcess = true;
                     commitButton.SetEnabled(false);
                     revertButton.SetEnabled(false);
                     commitMessageField.SetEnabled(false);
+                    commitButton.text = "Processing changes…";
                     CLIWrapper.Sync(commitMessage, filesToCommit.ToArray());
                 }
                 else
@@ -110,6 +115,7 @@ namespace Anchorpoint.Editor
                 
                 if (IsAnyFileSelected())
                 {
+                    inProcess = true;
                     commitButton.SetEnabled(false);
                     revertButton.SetEnabled(false);
                     commitMessageField.SetEnabled(false);
@@ -577,7 +583,14 @@ namespace Anchorpoint.Editor
 
         private bool IsAnyFileSelected()
         {
-            return GetSelectedFiles().Count > 0;
+            if (inProcess)
+            {
+                return false;
+            }
+            else
+            {
+                return GetSelectedFiles().Count > 0;
+            }
         }
 
         private bool AddSelectedFilesRecursive(ProjectData node, List<string> selectedFiles)
@@ -780,20 +793,23 @@ namespace Anchorpoint.Editor
             // Update the UI on the main thread
             EditorApplication.delayCall += () =>
             {
-                if (commitButton != null)
+                btnStr = output;
+
+                if (commitButton != null && btnStr == "Pushing git changes")
                 {
-                    commitButton.text = output;
+                    commitButton.text = "Commit Changed Files";
                 }
                 
-                if (output == "Status Command Completed")
+                if (btnStr == "Status Command Completed")
                 {
+                    inProcess = false;
                     OnRevertComplete();
                 }
             };
         }
         
         private void OnRevertComplete()
-        { 
+        {
             if (revertButton != null)
             {
                 revertButton.text = "Revert";

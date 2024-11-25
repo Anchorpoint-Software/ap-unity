@@ -54,11 +54,7 @@ namespace Anchorpoint.Editor
 
             Texture2D icon = null;
 
-            if (assetPathToIcon.TryGetValue(commitPath, out icon))
-            {
-                // Icon is already cached
-            }
-            else
+            if (!assetPathToIcon.TryGetValue(commitPath, out icon))
             {
                 // Determine the status of the asset
                 string status = null;
@@ -72,7 +68,14 @@ namespace Anchorpoint.Editor
                     status = notStagedStatus;
                 }
 
-                if (lockedFiles != null && lockedFiles.TryGetValue(commitPath, out string lockingUserEmail))
+
+                if (outdatedFiles != null && outdatedFiles.Contains(commitPath))
+                {
+                    // Load the 'Outdated' icon
+                    icon = LoadIcon(outdatedIcon);
+                    assetPathToIcon[commitPath] = icon;
+                }
+                else if (lockedFiles != null && lockedFiles.TryGetValue(commitPath, out string lockingUserEmail))
                 {
                     string currentUserEmail = DataManager.GetCurrentUser()?.Email;
 
@@ -104,18 +107,8 @@ namespace Anchorpoint.Editor
                                     EditorApplication.RepaintProjectWindow();
                                 }
                             });
-
-                            // Use a placeholder icon until the picture is loaded
-                            icon = LoadIcon(lockMeIcon);
-                            assetPathToIcon[commitPath] = icon;
                         }
                     }
-                }
-                else if (outdatedFiles != null && outdatedFiles.Contains(commitPath))
-                {
-                    // Load the 'Outdated' icon
-                    icon = LoadIcon(outdatedIcon);
-                    assetPathToIcon[commitPath] = icon;
                 }
                 else if (status == "A")
                 {
@@ -212,7 +205,7 @@ namespace Anchorpoint.Editor
         private static bool IsOneColumnLayout(Rect selectionRect)
         {
             // Determine if the selectionRect spans the entire width of the Project window
-            return selectionRect.width > 100;
+            return selectionRect.width > 100; 
         }
     }
 }
