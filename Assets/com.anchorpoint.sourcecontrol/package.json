@@ -2,15 +2,15 @@
   "name": "com.anchorpoint.sourcecontrol",
   "version": "1.0.0",
   "displayName": "Anchorpoint",
-  "description": "A package that connects Anchorpoint's desktop application with Unity",
+  "description": "A plugin that links Anchorpoint to Unity. The Anchorpoint desktop application must be installed and running. To access the interface in Unity, click Window/Anchorpoint.",
   "unity": "2021.3",
   "author": {
     "name": "Anchorpoint Software GmbH",
     "email": "contact@anchorpoint.app",
     "url": "https://www.anchorpoint.app/"
   },
-  "changelogURL": "https://www.anchorpoint.app/releases",
-  "documentationUrl": "https://docs.anchorpoint.app/docs/version-control/first-steps/unity/",
+  "changelogUrl": "https://www.anchorpoint.app/releases",
+  "documentationUrl": "https://docs.anchorpoint.app/docs/version-control/first-steps/unity",
   "licensesUrl": "https://www.anchorpoint.app/policies/eula",
   "keywords": [
     "anchorpoint",
