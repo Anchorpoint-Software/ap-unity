@@ -2,17 +2,22 @@
   "name": "com.anchorpoint.sourcecontrol",
   "version": "1.0.0",
   "displayName": "Anchorpoint",
-  "description": "A package that connects AnchorPoint app with Unity",
-  "unity": "2018.1",
+  "description": "A package that connects Anchorpoint's desktop application with Unity",
+  "unity": "2021.3",
   "author": {
-    "name": "AnchorPoint",
+    "name": "Anchorpoint Software GmbH",
     "email": "contact@anchorpoint.app",
     "url": "https://www.anchorpoint.app/"
   },
   "keywords": [
     "anchorpoint",
     "Anchor Point",
-    "source control"
+    "source control",
+    "version control",
+    "revision control",
+    "source code management",
+    "Git",
+    "Git LFS"
   ],
   "dependencies": {
     "com.unity.nuget.newtonsoft-json": "3.2.1",
