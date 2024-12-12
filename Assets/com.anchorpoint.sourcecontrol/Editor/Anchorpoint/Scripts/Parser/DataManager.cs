@@ -154,12 +154,10 @@ namespace Anchorpoint.Parser
                     Texture2D texture = DownloadHandlerTexture.GetContent(request);
                     emailToPictureTexture[email] = texture;
                     callback(texture);
-                    // Trigger Project window repaint
-                    EditorApplication.RepaintProjectWindow();
                 }
                 else
                 {
-                    Debug.LogError($"Failed to download picture for {email}: {request.error}");
+                    AnchorpointLogger.LogError($"Failed to download picture for {email}: {request.error}");
                     callback(null);
                 }
             }

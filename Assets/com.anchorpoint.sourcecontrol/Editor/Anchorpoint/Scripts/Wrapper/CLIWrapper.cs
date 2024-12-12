@@ -21,10 +21,7 @@ namespace Anchorpoint.Wrapper
         private static bool isRefreshing = false;                // Flag for refresh control
         private static readonly Queue<Action> refreshQueue = new Queue<Action>();  // Queue to manage refresh actions
         public static event Action<string> OnCommandOutputReceived;
-
         public static bool isWindowActive = false;
-            
-            
         public static void CLIPath() => AnchorpointLogger.Log(CLIConstants.CLIPath);
 
         // Updated Status command to run on Unity main thread, but only after other commands
@@ -311,11 +308,15 @@ namespace Anchorpoint.Wrapper
 
         private static void ProcessOutput(Command command, string jsonOutput, Callback callback)
         {
+            if (jsonOutput.Contains("\"error\":\"No Project\""))
+            {
+                AnchorpointLogger.LogError("No project found on Anchorpoint");
+                return;
+            }
             switch (command)
             {
                 case Command.Status:
                     CLIStatus status = CLIJsonParser.ParseJson<CLIStatus>(jsonOutput);
-
                     if (status != null)
                     {
                         DataManager.UpdateData(status);
@@ -325,12 +326,10 @@ namespace Anchorpoint.Wrapper
                     {
                         AnchorpointLogger.LogError("Failed to parse output as CLI Status or output was empty.");
                     }
-
                     break;
-                case Command.LockList:
-                    List<Dictionary<string, string>> fileDataList =
-                        CLIJsonParser.ParseJson<List<Dictionary<string, string>>>(jsonOutput);
 
+                case Command.LockList:
+                    List<Dictionary<string, string>> fileDataList = CLIJsonParser.ParseJson<List<Dictionary<string, string>>>(jsonOutput);
                     if (fileDataList != null)
                     {
                         DataManager.UpdateData(fileDataList);
@@ -340,15 +339,13 @@ namespace Anchorpoint.Wrapper
                     {
                         AnchorpointLogger.LogError("Failed to parse output as CLILockFile or output was empty.");
                     }
-
                     break;
+
                 case Command.UserList:
                     List<CLIUser> users = CLIJsonParser.ParseJson<List<CLIUser>>(jsonOutput);
                     if (users != null)
                     {
-                        // Updating the User List
                         DataManager.UpdateUserList(users);
-                        // Find the current user where "current" is "1"
                         CLIUser currentUser = users.Find(user => user.Current == "1");
                         if (currentUser != null)
                         {
@@ -364,7 +361,6 @@ namespace Anchorpoint.Wrapper
                     {
                         AnchorpointLogger.LogError("Failed to parse output as CLIUser or output was empty.");
                     }
-
                     break;
             }
         }

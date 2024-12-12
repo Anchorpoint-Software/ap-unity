@@ -19,7 +19,7 @@ namespace Anchorpoint.Constants
         /// </summary>
         public static string WorkingDirectory => FindGitIgnore(Directory.GetParent(Application.dataPath).FullName);
 
-        private static string CWD => $"--cwd \"{WorkingDirectory}\"";
+        public static string CWD => $"--cwd \"{WorkingDirectory}\"";
 
         public static string Status => $"{CWD} --json {APIVersion} status";
 

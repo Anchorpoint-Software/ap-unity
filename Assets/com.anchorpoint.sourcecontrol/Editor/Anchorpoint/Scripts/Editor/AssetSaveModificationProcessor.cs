@@ -18,6 +18,10 @@ namespace Anchorpoint.Editor
         
         static AssetSaveModificationProcessor()
         {
+            if (!PluginInitializer.IsConnected)
+            {
+                return;
+            }
             // Run the UserList command to get the current user
             CLIWrapper.GetCurrentUser();
         }
@@ -37,7 +41,8 @@ namespace Anchorpoint.Editor
                 AnchorpointLogger.LogWarning("Current user not retrieved yet.");
             }
 
-            string currentUserEmail = currentUser.Email;
+            string currentUserEmail = currentUser!=null ? currentUser.Email:"No user found";
+
             
             // Prepare a list for paths that are allowed to be saved
             List<string> allowedSavePaths = new List<string>();
