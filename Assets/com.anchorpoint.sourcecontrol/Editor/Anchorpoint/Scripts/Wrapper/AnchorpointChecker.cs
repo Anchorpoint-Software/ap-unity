@@ -7,7 +7,7 @@ using UnityEngine;
 public static class AnchorpointChecker
 {
     private const string anchorpointMacAppPath = "/Applications/Anchorpoint.app";
-    private const string anchorpointWinAppPath = "/Anchorpoint/anchorpoint.exe";
+    private const string anchorpointWinAppPath = "Anchorpoint\\Anchorpoint.exe";
     
     public static bool IsAnchorpointInstalled()
     {
@@ -25,9 +25,8 @@ public static class AnchorpointChecker
 
     private static bool IsAnchorpointInstalledWindows()
     {
-        string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-        string anchorpointExePath = Path.Combine(localAppData, anchorpointWinAppPath);
-        return File.Exists(anchorpointExePath);
+        string cliPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), anchorpointWinAppPath);
+        return File.Exists(cliPath);
     }
 
     private static bool IsAnchorpointInstalledMac()
