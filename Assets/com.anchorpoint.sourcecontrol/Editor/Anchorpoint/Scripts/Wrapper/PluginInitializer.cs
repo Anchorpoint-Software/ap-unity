@@ -115,8 +115,10 @@ public static class PluginInitializer
             case "project dirty":
                 CLIWrapper.Status();
                 break;
+            case "":
+                //  do nothing
+                break;
             default:
-                AnchorpointLogger.LogError("Default state has been called");
                 SetNoProjectState(true);
                 break;
         }
