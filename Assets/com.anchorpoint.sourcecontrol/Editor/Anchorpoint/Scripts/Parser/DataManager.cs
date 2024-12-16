@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using Anchorpoint.Logger;
 using UnityEngine;
 using Unity.EditorCoroutines.Editor;
-using UnityEditor;
 using UnityEngine.Networking;
 
 namespace Anchorpoint.Parser
@@ -55,6 +54,7 @@ namespace Anchorpoint.Parser
                     // Update the lock files from the CLI status
                     if (_status.LockedFiles != null)
                     {
+                        _lockFiles.Clear();
                         _lockFiles = new Dictionary<string, string>(_status.LockedFiles);
                         OnStatusUpdated?.Invoke();
                     }
@@ -79,19 +79,6 @@ namespace Anchorpoint.Parser
                 default:
                     AnchorpointLogger.LogError("Unsupported data type in UpdateData.");
                     break;
-            }
-        }
-        
-        public static void UpdateLockList(List<Dictionary<string, string>> lockList)
-        {
-            _lockFiles.Clear();
-            foreach (var lockInfo in lockList)
-            {
-                if (lockInfo.TryGetValue("filePath", out string filePath) &&
-                    lockInfo.TryGetValue("email", out string email))
-                {
-                    _lockFiles[filePath] = email;
-                }
             }
         }
 
@@ -154,12 +141,10 @@ namespace Anchorpoint.Parser
                     Texture2D texture = DownloadHandlerTexture.GetContent(request);
                     emailToPictureTexture[email] = texture;
                     callback(texture);
-                    // Trigger Project window repaint
-                    EditorApplication.RepaintProjectWindow();
                 }
                 else
                 {
-                    Debug.LogError($"Failed to download picture for {email}: {request.error}");
+                    AnchorpointLogger.LogError($"Failed to download picture for {email}: {request.error}");
                     callback(null);
                 }
             }

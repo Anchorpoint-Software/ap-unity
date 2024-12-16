@@ -11,11 +11,10 @@ namespace Anchorpoint.Constants
     {
         private const string APIVersion = "--apiVersion 1";
         public static string CLIPath {get; private set;} = null;
-        public static string CLIVersion {get; private set;} = null;
+        private static string CLIVersion {get; set;} = null;
 
         /// <summary>
-        /// Originally the current working directory will be the Unity project parent directory so this is implemented as that to get the CWD
-        /// But in development stage we are using a empty Dummy Unity Project cloned in Anchorpoint so wherever that exists the path for that is manually passed here as the CWD. 
+        /// Originally the current working directory will be the Unity project parent directory so this is implemented as that to get the CWD 
         /// </summary>
         public static string WorkingDirectory => FindGitIgnore(Directory.GetParent(Application.dataPath).FullName);
 
@@ -55,21 +54,20 @@ namespace Anchorpoint.Constants
         
         public static string RevertFiles(params string[] files)
         {
-            if (files.Length == 0)
+            switch (files.Length)
             {
-                // Revert all files in case of no file is selected
-                return $"{CWD} --json {APIVersion} revert";
-            }
-            else if (files.Length > 5)
-            {
-                // Use config file for large number of files
-                return Config(CLIConfig.RevertConfig(files));
-            }
-            else
-            {
-                // Revert specified files
-                string joinedFiles = string.Join(" ", files.Select(f => $"\"{f}\""));
-                return $"{CWD} --json {APIVersion} revert --files {joinedFiles}";
+                case 0:
+                    // Revert all files in case of no file is selected
+                    return $"{CWD} --json {APIVersion} revert";
+                case > 5:
+                    // Use config file for large number of files
+                    return Config(CLIConfig.RevertConfig(files));
+                default:
+                {
+                    // Revert specified files
+                    string joinedFiles = string.Join(" ", files.Select(f => $"\"{f}\""));
+                    return $"{CWD} --json {APIVersion} revert --files {joinedFiles}";
+                }
             }
         }
 
@@ -105,7 +103,7 @@ namespace Anchorpoint.Constants
 
         public static string LogFile(string file, int numberOfCommits) => $"{CWD} --json {APIVersion} log -f \"{file}\" -n {numberOfCommits}";
 
-        public static string Config(string configPath) => $"--config \"{configPath}\"";
+        private static string Config(string configPath) => $"--config \"{configPath}\"";
 
         [InitializeOnLoadMethod]
         private static void GetCLIPath()

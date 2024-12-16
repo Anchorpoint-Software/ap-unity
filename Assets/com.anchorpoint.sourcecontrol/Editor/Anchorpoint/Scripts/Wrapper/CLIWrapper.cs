@@ -4,6 +4,7 @@ using System.Diagnostics;
 using Anchorpoint.Parser;
 using Anchorpoint.Constants;
 using System.Collections.Generic;
+using System.Threading;
 using Anchorpoint.Logger;
 using UnityEditor;
 
@@ -21,10 +22,7 @@ namespace Anchorpoint.Wrapper
         private static bool isRefreshing = false;                // Flag for refresh control
         private static readonly Queue<Action> refreshQueue = new Queue<Action>();  // Queue to manage refresh actions
         public static event Action<string> OnCommandOutputReceived;
-
         public static bool isWindowActive = false;
-            
-            
         public static void CLIPath() => AnchorpointLogger.Log(CLIConstants.CLIPath);
 
         // Updated Status command to run on Unity main thread, but only after other commands
@@ -129,7 +127,7 @@ namespace Anchorpoint.Wrapper
             EnqueueCommand(Command.Revert, CLIConstants.RevertFiles(files), true);
         }
 
-        // public static void LockList() => EnqueueCommand(Command.LockList, CLIConstants.LockList);
+        public static void LockList() => EnqueueCommand(Command.LockList, CLIConstants.LockList);
 
         public static void LockCreate(bool keep, params string[] files)
         {
@@ -193,14 +191,78 @@ namespace Anchorpoint.Wrapper
             });
         }
 
-        // The main method that runs the command, now excluding the Status command from threaded logic
         private static void RunCommand(Command command, string commandText, bool sequential = false, Callback callback = null)
         {
             Output = string.Empty;
             AnchorpointLogger.Log($"Running Command: {commandText}");
-            
+
             AddOutput($"<color=green>Running Command: {commandText}</color>");
 
+            // Decide whether to run on main thread or background thread
+            if (command == Command.Status || command == Command.UserList)
+            {
+                // Synchronous approach on main thread
+                RunMainThreadCommand(command, commandText, sequential, callback);
+            }
+            else
+            {
+                // Offload to background
+                RunCommandInBackground(command, commandText, callback);
+            }
+        }
+        
+        private static void RunCommandInBackground(Command command, string commandText, Callback callback = null)
+        {
+            Thread backgroundThread = new Thread(() =>
+            {
+                try
+                {
+                    ProcessStartInfo startInfo = new()
+                    {
+                        FileName = CLIConstants.CLIPath,
+                        Arguments = commandText,
+                        RedirectStandardOutput = true,
+                        RedirectStandardError = true,
+                        UseShellExecute = false,
+                        CreateNoWindow = true
+                    };
+
+                    using Process process = new() { StartInfo = startInfo };
+                    process.Start();
+
+                    // Optionally read output asynchronously
+                    string errorOutput = process.StandardError.ReadToEnd();
+                    if (!string.IsNullOrEmpty(errorOutput))
+                    {
+                        lock (Output)
+                        {
+                            Output = errorOutput;
+                        }
+                    }
+
+                    process.WaitForExit();
+                }
+                catch (Exception ex)
+                {
+                    AnchorpointLogger.LogError($"Error running command in background: {ex.Message}");
+                }
+                finally
+                {
+                    // Once done, run callback on main thread
+                    EditorApplication.delayCall += () =>
+                    {
+                        callback?.Invoke();
+                        QueueRefresh(command);
+                    };
+                }
+            });
+    
+            backgroundThread.IsBackground = true;
+            backgroundThread.Start();
+        }
+        
+        private static void RunMainThreadCommand(Command command, string commandText, bool sequential, Callback callback)
+        {
             try
             {
                 ProcessStartInfo startInfo = new()
@@ -260,8 +322,7 @@ namespace Anchorpoint.Wrapper
                 AnchorpointLogger.LogError($"Error running command: {ex.Message}");
             }
         }
-
-        // Handle queuing and delaying RefreshWindow to prevent multiple triggers
+        
         private static void QueueRefresh(Command command)
         {
             // Add the refresh action to the queue
@@ -311,11 +372,15 @@ namespace Anchorpoint.Wrapper
 
         private static void ProcessOutput(Command command, string jsonOutput, Callback callback)
         {
+            if (jsonOutput.Contains("\"error\":\"No Project\""))
+            {
+                AnchorpointLogger.LogError("No project found on Anchorpoint");
+                return;
+            }
             switch (command)
             {
                 case Command.Status:
                     CLIStatus status = CLIJsonParser.ParseJson<CLIStatus>(jsonOutput);
-
                     if (status != null)
                     {
                         DataManager.UpdateData(status);
@@ -325,12 +390,10 @@ namespace Anchorpoint.Wrapper
                     {
                         AnchorpointLogger.LogError("Failed to parse output as CLI Status or output was empty.");
                     }
-
                     break;
-                case Command.LockList:
-                    List<Dictionary<string, string>> fileDataList =
-                        CLIJsonParser.ParseJson<List<Dictionary<string, string>>>(jsonOutput);
 
+                case Command.LockList:
+                    List<Dictionary<string, string>> fileDataList = CLIJsonParser.ParseJson<List<Dictionary<string, string>>>(jsonOutput);
                     if (fileDataList != null)
                     {
                         DataManager.UpdateData(fileDataList);
@@ -340,15 +403,13 @@ namespace Anchorpoint.Wrapper
                     {
                         AnchorpointLogger.LogError("Failed to parse output as CLILockFile or output was empty.");
                     }
-
                     break;
+
                 case Command.UserList:
                     List<CLIUser> users = CLIJsonParser.ParseJson<List<CLIUser>>(jsonOutput);
                     if (users != null)
                     {
-                        // Updating the User List
                         DataManager.UpdateUserList(users);
-                        // Find the current user where "current" is "1"
                         CLIUser currentUser = users.Find(user => user.Current == "1");
                         if (currentUser != null)
                         {
@@ -364,7 +425,6 @@ namespace Anchorpoint.Wrapper
                     {
                         AnchorpointLogger.LogError("Failed to parse output as CLIUser or output was empty.");
                     }
-
                     break;
             }
         }

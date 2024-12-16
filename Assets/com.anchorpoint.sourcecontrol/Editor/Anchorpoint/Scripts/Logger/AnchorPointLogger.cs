@@ -5,7 +5,7 @@ namespace Anchorpoint.Logger
 {
     public static class AnchorpointLogger
     {
-        public static bool EnableLogging = true; // You can toggle this based on environment
+        private static bool EnableLogging = true; // You can toggle this based on environment
 
         public static void Log(string message,
             [CallerFilePath] string filePath = "",

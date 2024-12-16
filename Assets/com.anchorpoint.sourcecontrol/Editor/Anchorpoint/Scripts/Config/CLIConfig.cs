@@ -7,7 +7,6 @@ using Anchorpoint.Constants;
 public static class CLIConfig
 {
     private static string FormattedDirectory => CLIConstants.WorkingDirectory.Replace("\\", "\\\\");
-
     private static string PersistentDataPath {get; set;}
 
     [InitializeOnLoadMethod]

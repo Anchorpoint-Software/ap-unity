@@ -14,6 +14,7 @@ namespace Anchorpoint.Enums
         LogFile    = 9,
         Config     = 10,
         Revert = 11
+        // Connect = 12 not putting here as it was a complete background process
     }
     
 }

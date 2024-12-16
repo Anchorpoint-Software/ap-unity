@@ -10,17 +10,10 @@ using Anchorpoint.Parser;
 
 namespace Anchorpoint.Editor
 {
-    [InitializeOnLoad]
     public class AssetSaveModificationProcessor : AssetModificationProcessor
     {
         private static string rootRelativePath;
         private static Dictionary<string, string> lockedFiles;
-        
-        static AssetSaveModificationProcessor()
-        {
-            // Run the UserList command to get the current user
-            CLIWrapper.GetCurrentUser();
-        }
 
         // This method is automatically called by Unity before assets are saved
         public static string[] OnWillSaveAssets(string[] paths)
@@ -37,7 +30,8 @@ namespace Anchorpoint.Editor
                 AnchorpointLogger.LogWarning("Current user not retrieved yet.");
             }
 
-            string currentUserEmail = currentUser.Email;
+            string currentUserEmail = currentUser!=null ? currentUser.Email:"No user found";
+
             
             // Prepare a list for paths that are allowed to be saved
             List<string> allowedSavePaths = new List<string>();
@@ -97,30 +91,5 @@ namespace Anchorpoint.Editor
             // Ensure the path is relative, i.e., doesn't have any leading separators
             return normalizedPath.TrimStart('/');
         }
-        
-        // [OnOpenAsset]
-        // public static bool OnOpenAsset(int instanceID, int line)
-        // {
-        //     string path = AssetDatabase.GetAssetPath(instanceID);
-        //
-        //     // Refresh the locked files list before checking
-        //     RefreshLockedFiles();
-        //
-        //     // Convert the path dynamically to match the commit path format
-        //     string commitPath = GetCommitPath(path);
-        //
-        //     if (lockedFiles != null && lockedFiles.ContainsKey(commitPath))
-        //     {
-        //         // Notify the user with the original path, as it is user-facing
-        //         EditorUtility.DisplayDialog("Read-Only File",
-        //             $"{path} is locked by another user and cannot be opened.", "OK");
-        //
-        //         // Returning true prevents the asset from being opened
-        //         return true;
-        //     }
-        //
-        //     // Returning false allows the asset to be opened as usual
-        //     return false;
-        // }
     }
 }

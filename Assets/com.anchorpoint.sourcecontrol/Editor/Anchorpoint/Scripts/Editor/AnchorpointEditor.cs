@@ -15,34 +15,64 @@ namespace Anchorpoint.Editor
     public class AnchorpointEditor : EditorWindow
     {
         [SerializeField] private VisualTreeAsset m_VisualTreeAsset = default;
+        
+        private VisualElement connectAnchorpointView;
+        private VisualElement connectTryAgainView;
+        private VisualElement connectedView;
+        private VisualElement reconnectView;
+        private VisualElement root;
 
         private List<TreeViewItemData<ProjectData>> treeViewItems = new List<TreeViewItemData<ProjectData>>();
         private ProjectData projectRoot; // Root of the project data tree
         private TreeView treeView;
         private TextField commitMessageField;
+        private Label changesLabel;
+        private Label noticeLable;
         private Button commitButton;
         private Button revertButton;
-
+        private Button allButton;
+        private Button noneButton;
+        private Button refreshButton;
+        private Button disconnectButton;
+        private Button helpConnectedWinButton;
+        
+        //  Connect to Anchorpoint window
+        private Label descriptionConnectWin;
+        private Button connectToAnchorpoint;
+        private Button helpConeectWindButton;
+        
+        //  Try again Anchorpoint window
+        private Label descriptionTryAgainWin;
+        private Button openAnchorpointButton;
+        private Button trAgainAnchorpointButton;
+        private Button helpTryAgainWindowButton;
+        
+        //  Pause window
+        private Button reConnectToAnchorpoint;
+        
         // Global paths
         private string projectPath;      // Absolute path to the Unity project root
-        private const string assetsFolderName = "Assets";
-        private string assetsPath;       // Absolute path to the Assets folder
         private string btnStr;
+        private const string assetsFolderName = "Assets";
+        private const string anchorPointIcon = "d8e0264a1e3a54b09aaf9e7ac62d4e1f";
+        private const string helpUrl = "https://docs.anchorpoint.app/docs/version-control/first-steps/unity/";
+        private const string noProjectErrorDescription = "This Unity project is not maintained by Anchorpoint. You will need to create a project first.\n\nCheck the documentation for help.";
+        private const string validatingDescription = "Anchorpoint’s desktop application is not available.\n\nCheck the documentation for help.";
         
         private bool inProcess = false;      // Flag to check is if some commit/revert is in process
         
-        private const string anchorPointIcon = "d8e0264a1e3a54b09aaf9e7ac62d4e1f";
-
         private void OnEnable()
         {
             CLIWrapper.RefreshWindow += OnEditorUpdate;
-            CLIWrapper.OnCommandOutputReceived += OnCommandOutputReceived; 
+            CLIWrapper.OnCommandOutputReceived += OnCommandOutputReceived;
+            PluginInitializer.RefreshView += RefreshView;
         }
 
         private void OnDisable()
         {
             CLIWrapper.RefreshWindow -= OnEditorUpdate;
-            CLIWrapper.OnCommandOutputReceived -= OnCommandOutputReceived; 
+            CLIWrapper.OnCommandOutputReceived -= OnCommandOutputReceived;
+            PluginInitializer.RefreshView -= RefreshView;
         }
 
         private void OnEditorUpdate()
@@ -58,77 +88,44 @@ namespace Anchorpoint.Editor
             AnchorpointEditor window = GetWindow<AnchorpointEditor>();
 
             string assetPath = AssetDatabase.GUIDToAssetPath(anchorPointIcon);
-            Texture2D icon = (Texture2D)AssetDatabase.LoadAssetAtPath<Texture2D>(assetPath);
+            Texture2D icon = AssetDatabase.LoadAssetAtPath<Texture2D>(assetPath);
             window.titleContent = new GUIContent("Anchorpoint", icon);
         }
 
         public void CreateGUI()
         {
-            VisualElement root = rootVisualElement;
-
+            root = rootVisualElement;
+            
             VisualElement labelFromUXML = m_VisualTreeAsset.Instantiate();
             root.Add(labelFromUXML);
-
-            // Get the commit message text field and commit button
-            commitMessageField = root.Q<TextField>("CommitMessageField");
-            commitButton = root.Q<Button>("CommitButton");
-            commitButton.SetEnabled(false); // Disable the commit button initially
-            revertButton = root.Q<Button>("Revert");
-            revertButton.SetEnabled(false);
-
-            Label changesLabel = root.Q<Label>("ChangeCountLabel");
-            int totalChanges = CalculateTotalChanges();
-            changesLabel.text = $"Total Changes: {totalChanges}";
-
-            Button allButton = root.Q<Button>("AllButton");
-            Button noneButton = root.Q<Button>("NoneButton");
-
-            treeView = root.Q<TreeView>("TreeView");
-
-            allButton.clickable.clicked += () => { SetAllCheckboxes(true); };
-            noneButton.clickable.clicked += () => { SetAllCheckboxes(false); };
-
-            // When the commit button is clicked, gather selected files and commit them
-            commitButton.clickable.clicked += () =>
-            {
-                string commitMessage = commitMessageField.value;
-                List<string> filesToCommit = GetSelectedFiles();
-                
-                if (IsAnyFileSelected())
-                {
-                    inProcess = true;
-                    commitButton.SetEnabled(false);
-                    revertButton.SetEnabled(false);
-                    commitMessageField.SetEnabled(false);
-                    commitButton.text = "Processing changes…";
-                    CLIWrapper.Sync(commitMessage, filesToCommit.ToArray());
-                }
-                else
-                {
-                    AnchorpointLogger.LogWarning("No files selected for commit.");
-                }
-            };
             
-            revertButton.clickable.clicked += () =>
-            {
-                List<string> filesToRevert = GetSelectedFiles();
-                
-                if (IsAnyFileSelected())
-                {
-                    inProcess = true;
-                    commitButton.SetEnabled(false);
-                    revertButton.SetEnabled(false);
-                    commitMessageField.SetEnabled(false);
-                    revertButton.text = "Reverting...";
-                    CLIWrapper.Revert(filesToRevert.ToArray());
-                }
-                else
-                {
-                    AnchorpointLogger.LogWarning("No files selected for revert.");
-                }
-            };
+            //  Getting three windows in the flow
+            connectAnchorpointView = root.Q<VisualElement>("ConnectAnchorpoint");
+            connectTryAgainView = root.Q<VisualElement>("ConnectTryAgain");
+            connectedView = root.Q<VisualElement>("Connected");
+            reconnectView = root.Q<VisualElement>("PauseAnchorpoint");
 
-            CreateTreeUnity(treeView);
+            RefreshView();
+        }
+
+        private void RefreshView()
+        {
+            if (PluginInitializer.IsNotAnchorpointProject)
+            {
+                ShowNoProjectError();
+            }
+            else if (PluginInitializer.IsInitialized && PluginInitializer.IsConnected)
+            {
+                ShowConnectedWindow();
+            }
+            else if (PluginInitializer.IsPlaymode && PluginInitializer.WasConnected)
+            {
+                ShowReconnectWindow();
+            }
+            else
+            {
+                ShowConnectWindow();
+            }
         }
 
         private void CreateTreeUnity(TreeView treeView)
@@ -400,15 +397,14 @@ namespace Anchorpoint.Editor
             CLIStatus status = DataManager.GetStatus();
             if (status == null)
             {
-                AnchorpointLogger.LogError("CLIStatus is null");
+                AnchorpointLogger.LogWarning("CLIStatus is null");
                 CLIWrapper.Status();
                 return new ProjectData { Name = "No CLI Data" };
             }
 
-            projectPath = Directory.GetParent(Application.dataPath).FullName;
-            assetsPath = Path.Combine(projectPath, assetsFolderName);
+            projectPath = Directory.GetParent(Application.dataPath)?.FullName;
 
-            string projectName = Directory.GetParent(Application.dataPath).Name;
+            string projectName = Directory.GetParent(Application.dataPath)?.Name;
             string rootRelativePath = projectPath.Substring(CLIConstants.WorkingDirectory.Length).TrimStart(Path.DirectorySeparatorChar);
 
             var projectRoot = new ProjectData
@@ -816,36 +812,197 @@ namespace Anchorpoint.Editor
             }
         }
         
-        private void RefreshTreeItems(ProjectData itemData)
-        {
-            var idsToRefresh = new List<int>();
-            GetAllItemIds(itemData, idsToRefresh);
-
-            foreach (var id in idsToRefresh)
-            {
-                treeView.RefreshItem(id);
-            }
-        }
-
-        private void GetAllItemIds(ProjectData itemData, List<int> ids)
-        {
-            ids.Add(itemData.Id);
-
-            if (itemData.Children != null && itemData.Children.Any())
-            {
-                foreach (var child in itemData.Children)
-                {
-                    GetAllItemIds(child, ids);
-                }
-            }
-        }
-        
         private void Update()
         {
             if (this.docked || this.hasFocus)
             {
                 CLIWrapper.isWindowActive = true;
             }
+        }
+
+        private void ShowConnectWindow()
+        {
+            AnchorpointLogger.Log("ShowConnectWindow Shown");
+            
+            connectAnchorpointView.style.display = DisplayStyle.Flex;
+            connectTryAgainView.style.display = DisplayStyle.None;
+            connectedView.style.display = DisplayStyle.None;
+            reconnectView.style.display = DisplayStyle.None;
+            
+            //  Getting the Connect to Anchorpoint window
+            descriptionConnectWin = root.Q<Label>("DescriptionConnectWindow");
+            connectToAnchorpoint = root.Q<Button>("ConnectToAnchorpoint");
+            helpConeectWindButton = root.Q<Button>("HelpConnectWindow");
+            
+            connectToAnchorpoint.text = "Connect to Anchorpoint";
+            descriptionConnectWin.text = "Connect to Anchorpoint to commit and view the status of files from within Unity.";
+
+            connectToAnchorpoint.clickable.clicked += () => { ConnectToAnchorPoint(); };
+            helpConeectWindButton.clickable.clicked += () => { Help(); };
+        }
+        
+        private void ShowNoProjectError()
+        {
+            AnchorpointLogger.Log("ShowNoProjectError Shown");
+            
+            connectAnchorpointView.style.display = DisplayStyle.None;
+            connectTryAgainView.style.display = DisplayStyle.Flex;
+            connectedView.style.display = DisplayStyle.None;
+            reconnectView.style.display = DisplayStyle.None;
+            
+            descriptionTryAgainWin = root.Q<Label>("DescriptionTryAgainWindow");
+            trAgainAnchorpointButton = root.Q<Button>("TryAgain");
+            openAnchorpointButton = root.Q<Button>("OpenAnchorpoint");
+            helpTryAgainWindowButton = root.Q<Button>("HelpTryAgainWindow");
+
+            descriptionTryAgainWin.text = noProjectErrorDescription;
+           
+            trAgainAnchorpointButton.clickable.clicked += () => { PluginInitializer.StartConnection(); };
+            openAnchorpointButton.clickable.clicked += () => { AnchorpointChecker.OpenAnchorpointApplication(); };
+            helpTryAgainWindowButton.clickable.clicked += () => { Help(); };
+        }
+        
+        private void ShowConnectedWindow()
+        {
+            AnchorpointLogger.Log("ShowConnectedWindow Shown");
+            
+            connectAnchorpointView.style.display = DisplayStyle.None;
+            connectTryAgainView.style.display = DisplayStyle.None;
+            connectedView.style.display = DisplayStyle.Flex;
+            reconnectView.style.display = DisplayStyle.None;
+            
+            // Get the commit message text field and commit button
+            commitMessageField = root.Q<TextField>("CommitMessageField");
+            commitButton = root.Q<Button>("CommitButton");
+            commitButton.SetEnabled(false); // Disable the commit button initially
+            revertButton = root.Q<Button>("Revert");
+            revertButton.SetEnabled(false);
+
+            refreshButton = root.Q<Button>("Refresh");
+            disconnectButton = root.Q<Button>("Disconnect");
+            helpConnectedWinButton = root.Q<Button>("ConnectedHelp");
+
+            changesLabel = root.Q<Label>("ChangeCountLabel");
+            int totalChanges = CalculateTotalChanges();
+            changesLabel.text = $"Total Changes: {totalChanges}";
+
+            allButton = root.Q<Button>("AllButton");
+            noneButton = root.Q<Button>("NoneButton");
+
+            treeView = root.Q<TreeView>("TreeView");
+
+            noticeLable = root.Q<Label>("Notice");
+            noticeLable.style.display = PluginInitializer.IsProjectOpen ? DisplayStyle.None : DisplayStyle.Flex;
+            
+            // When the commit button is clicked, gather selected files and commit them
+            commitButton.clickable.clicked += () =>
+            {
+                string commitMessage = commitMessageField.value;
+                List<string> filesToCommit = GetSelectedFiles();
+                
+                if (IsAnyFileSelected())
+                {
+                    inProcess = true;
+                    commitButton.SetEnabled(false);
+                    revertButton.SetEnabled(false);
+                    commitMessageField.SetEnabled(false);
+                    commitButton.text = "Processing changes…";
+                    CLIWrapper.Sync(commitMessage, filesToCommit.ToArray());
+                }
+                else
+                {
+                    AnchorpointLogger.LogWarning("No files selected for commit.");
+                }
+            };
+            
+            revertButton.clickable.clicked += () =>
+            {
+                List<string> filesToRevert = GetSelectedFiles();
+                
+                if (IsAnyFileSelected())
+                {
+                    inProcess = true;
+                    commitButton.SetEnabled(false);
+                    revertButton.SetEnabled(false);
+                    commitMessageField.SetEnabled(false);
+                    revertButton.text = "Reverting...";
+                    CLIWrapper.Revert(filesToRevert.ToArray());
+                }
+                else
+                {
+                    AnchorpointLogger.LogWarning("No files selected for revert.");
+                }
+            };
+            
+            allButton.clickable.clicked += () => { SetAllCheckboxes(true); };
+            noneButton.clickable.clicked += () => { SetAllCheckboxes(false); };
+            
+            refreshButton.clickable.clicked += () => { Refresh(); };
+            disconnectButton.clickable.clicked += () => { Disconnect(); };
+            helpConnectedWinButton.clickable.clicked += () => { Help(); };
+            
+            CreateTreeUnity(treeView);
+        }
+
+        private void ShowReconnectWindow()
+        {
+            AnchorpointLogger.Log("ShowReconnectWindow Shown");
+            
+            connectAnchorpointView.style.display = DisplayStyle.None;
+            connectTryAgainView.style.display = DisplayStyle.None;
+            connectedView.style.display = DisplayStyle.None;
+            reconnectView.style.display = DisplayStyle.Flex;
+            
+            reConnectToAnchorpoint = root.Q<Button>("ReconnectToAnchorpoint");
+            reConnectToAnchorpoint.clickable.clicked += () => { PluginInitializer.StartConnection(); };
+        }
+
+        private void Refresh()
+        {
+            CLIWrapper.Status();
+        }
+
+        private void Disconnect()
+        {
+            PluginInitializer.StopConnectionExt();
+            ShowConnectWindow();
+        }
+
+        private void Help()
+        {
+            Application.OpenURL(helpUrl);
+        }
+        
+        private void ConnectToAnchorPoint()
+        {
+            AnchorpointLogger.Log("ConnectToAnchorPoint");
+
+            if (!ValidatingAnchorPoint())
+            {
+                return;
+            }
+
+            if (PluginInitializer.IsConnected)
+            {
+                AnchorpointLogger.LogWarning("Already connected.");
+            }
+            else
+            {
+                PluginInitializer.StartConnection();
+                connectToAnchorpoint.text = "Connecting...";
+            }
+        }
+
+        private bool ValidatingAnchorPoint()
+        {
+            if (AnchorpointChecker.IsAnchorpointInstalled())
+            {
+                return true;
+            }
+
+            descriptionConnectWin.text = validatingDescription;
+
+            return false;
         }
     }
 }

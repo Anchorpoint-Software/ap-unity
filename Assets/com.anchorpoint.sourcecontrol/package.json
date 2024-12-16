@@ -2,25 +2,17 @@
   "name": "com.anchorpoint.sourcecontrol",
   "version": "1.0.0",
   "displayName": "Anchorpoint",
-  "description": "A plugin that links Anchorpoint to Unity. The Anchorpoint desktop application must be installed and running. To access the interface in Unity, click Window/Anchorpoint.",
-  "unity": "2021.3",
+  "description": "A package that connects AnchorPoint app with Unity",
+  "unity": "2018.1",
   "author": {
-    "name": "Anchorpoint Software GmbH",
+    "name": "AnchorPoint",
     "email": "contact@anchorpoint.app",
     "url": "https://www.anchorpoint.app/"
   },
-  "changelogUrl": "https://www.anchorpoint.app/releases",
-  "documentationUrl": "https://docs.anchorpoint.app/docs/version-control/first-steps/unity",
-  "licensesUrl": "https://www.anchorpoint.app/policies/eula",
   "keywords": [
     "anchorpoint",
     "Anchor Point",
-    "source control",
-    "version control",
-    "revision control",
-    "source code management",
-    "Git",
-    "Git LFS"
+    "source control"
   ],
   "dependencies": {
     "com.unity.nuget.newtonsoft-json": "3.2.1",
