@@ -30,22 +30,24 @@ namespace Anchorpoint.Wrapper
         {
             if (isStatusQueuedAfterCommand)
             {
-                // Queue status to run after the other command completes
-                _commandQueue.EnqueueCommand(RunStatusCommandOnMainThread);
+                // Queue status to run after other commands complete
+                _commandQueue.EnqueueCommand(RunStatusCommandOnBackgroundThread);
             }
             else
             {
-                EditorApplication.update += RunStatusCommandOnMainThread;
+                RunStatusCommandOnBackgroundThread();
             }
         }
 
-        private static void RunStatusCommandOnMainThread()
+        private static void RunStatusCommandOnBackgroundThread()
         {
-            // Ensure this runs once
-            EditorApplication.update -= RunStatusCommandOnMainThread;
+            Thread statusThread = new Thread(() =>
+                {
+                    RunCommand(Command.Status, CLIConstants.Status);
+                })
+                { IsBackground = true };
 
-            // Execute the Status command on the main thread
-            RunCommand(Command.Status, CLIConstants.Status);
+            statusThread.Start();
         }
         
         public static void GetCurrentUser()
@@ -127,7 +129,7 @@ namespace Anchorpoint.Wrapper
             EnqueueCommand(Command.Revert, CLIConstants.RevertFiles(files), true);
         }
 
-        public static void LockList() => EnqueueCommand(Command.LockList, CLIConstants.LockList);
+        // public static void LockList() => EnqueueCommand(Command.LockList, CLIConstants.LockList);
 
         public static void LockCreate(bool keep, params string[] files)
         {
@@ -191,78 +193,14 @@ namespace Anchorpoint.Wrapper
             });
         }
 
+        // The main method that runs the command, now excluding the Status command from threaded logic
         private static void RunCommand(Command command, string commandText, bool sequential = false, Callback callback = null)
         {
             Output = string.Empty;
             AnchorpointLogger.Log($"Running Command: {commandText}");
-
+            
             AddOutput($"<color=green>Running Command: {commandText}</color>");
 
-            // Decide whether to run on main thread or background thread
-            if (command == Command.Status || command == Command.UserList)
-            {
-                // Synchronous approach on main thread
-                RunMainThreadCommand(command, commandText, sequential, callback);
-            }
-            else
-            {
-                // Offload to background
-                RunCommandInBackground(command, commandText, callback);
-            }
-        }
-        
-        private static void RunCommandInBackground(Command command, string commandText, Callback callback = null)
-        {
-            Thread backgroundThread = new Thread(() =>
-            {
-                try
-                {
-                    ProcessStartInfo startInfo = new()
-                    {
-                        FileName = CLIConstants.CLIPath,
-                        Arguments = commandText,
-                        RedirectStandardOutput = true,
-                        RedirectStandardError = true,
-                        UseShellExecute = false,
-                        CreateNoWindow = true
-                    };
-
-                    using Process process = new() { StartInfo = startInfo };
-                    process.Start();
-
-                    // Optionally read output asynchronously
-                    string errorOutput = process.StandardError.ReadToEnd();
-                    if (!string.IsNullOrEmpty(errorOutput))
-                    {
-                        lock (Output)
-                        {
-                            Output = errorOutput;
-                        }
-                    }
-
-                    process.WaitForExit();
-                }
-                catch (Exception ex)
-                {
-                    AnchorpointLogger.LogError($"Error running command in background: {ex.Message}");
-                }
-                finally
-                {
-                    // Once done, run callback on main thread
-                    EditorApplication.delayCall += () =>
-                    {
-                        callback?.Invoke();
-                        QueueRefresh(command);
-                    };
-                }
-            });
-    
-            backgroundThread.IsBackground = true;
-            backgroundThread.Start();
-        }
-        
-        private static void RunMainThreadCommand(Command command, string commandText, bool sequential, Callback callback)
-        {
             try
             {
                 ProcessStartInfo startInfo = new()
@@ -322,7 +260,8 @@ namespace Anchorpoint.Wrapper
                 AnchorpointLogger.LogError($"Error running command: {ex.Message}");
             }
         }
-        
+
+        // Handle queuing and delaying RefreshWindow to prevent multiple triggers
         private static void QueueRefresh(Command command)
         {
             // Add the refresh action to the queue

@@ -54,7 +54,6 @@ namespace Anchorpoint.Parser
                     // Update the lock files from the CLI status
                     if (_status.LockedFiles != null)
                     {
-                        _lockFiles.Clear();
                         _lockFiles = new Dictionary<string, string>(_status.LockedFiles);
                         OnStatusUpdated?.Invoke();
                     }

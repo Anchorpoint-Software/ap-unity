@@ -110,6 +110,7 @@ namespace Anchorpoint.Editor
 
         private void RefreshView()
         {
+            // DeregisteringBtnFunctions();
             if (PluginInitializer.IsNotAnchorpointProject)
             {
                 ShowNoProjectError();
@@ -836,9 +837,12 @@ namespace Anchorpoint.Editor
             
             connectToAnchorpoint.text = "Connect to Anchorpoint";
             descriptionConnectWin.text = "Connect to Anchorpoint to commit and view the status of files from within Unity.";
-
-            connectToAnchorpoint.clickable.clicked += () => { ConnectToAnchorPoint(); };
-            helpConeectWindButton.clickable.clicked += () => { Help(); };
+            
+            connectToAnchorpoint.clickable.clicked -= ConnectToAnchorPoint;
+            helpConeectWindButton.clickable.clicked -= Help;
+            
+            connectToAnchorpoint.clickable.clicked += ConnectToAnchorPoint;
+            helpConeectWindButton.clickable.clicked += Help;
         }
         
         private void ShowNoProjectError()
@@ -856,10 +860,14 @@ namespace Anchorpoint.Editor
             helpTryAgainWindowButton = root.Q<Button>("HelpTryAgainWindow");
 
             descriptionTryAgainWin.text = noProjectErrorDescription;
+
+            trAgainAnchorpointButton.clickable.clicked -= PluginInitializer.StartConnection;
+            openAnchorpointButton.clickable.clicked -= AnchorpointChecker.OpenAnchorpointApplication;
+            helpTryAgainWindowButton.clickable.clicked -= Help;
            
-            trAgainAnchorpointButton.clickable.clicked += () => { PluginInitializer.StartConnection(); };
-            openAnchorpointButton.clickable.clicked += () => { AnchorpointChecker.OpenAnchorpointApplication(); };
-            helpTryAgainWindowButton.clickable.clicked += () => { Help(); };
+            trAgainAnchorpointButton.clickable.clicked += PluginInitializer.StartConnection;
+            openAnchorpointButton.clickable.clicked += AnchorpointChecker.OpenAnchorpointApplication;
+            helpTryAgainWindowButton.clickable.clicked += Help;
         }
         
         private void ShowConnectedWindow()
@@ -937,9 +945,13 @@ namespace Anchorpoint.Editor
             allButton.clickable.clicked += () => { SetAllCheckboxes(true); };
             noneButton.clickable.clicked += () => { SetAllCheckboxes(false); };
             
-            refreshButton.clickable.clicked += () => { Refresh(); };
-            disconnectButton.clickable.clicked += () => { Disconnect(); };
-            helpConnectedWinButton.clickable.clicked += () => { Help(); };
+            refreshButton.clickable.clicked -= Refresh;
+            disconnectButton.clickable.clicked -= Disconnect;
+            helpConnectedWinButton.clickable.clicked -= Help;
+            
+            refreshButton.clickable.clicked += Refresh;
+            disconnectButton.clickable.clicked += Disconnect;
+            helpConnectedWinButton.clickable.clicked += Help;
             
             CreateTreeUnity(treeView);
         }
@@ -954,7 +966,9 @@ namespace Anchorpoint.Editor
             reconnectView.style.display = DisplayStyle.Flex;
             
             reConnectToAnchorpoint = root.Q<Button>("ReconnectToAnchorpoint");
-            reConnectToAnchorpoint.clickable.clicked += () => { PluginInitializer.StartConnection(); };
+            
+            reConnectToAnchorpoint.clickable.clicked -= PluginInitializer.StartConnection;
+            reConnectToAnchorpoint.clickable.clicked += PluginInitializer.StartConnection;
         }
 
         private void Refresh()
