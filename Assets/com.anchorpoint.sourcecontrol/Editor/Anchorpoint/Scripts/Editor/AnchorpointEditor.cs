@@ -35,6 +35,9 @@ namespace Anchorpoint.Editor
         private Button refreshButton;
         private Button disconnectButton;
         private Button helpConnectedWinButton;
+        private VisualElement loadingImg;
+        private VisualElement refreshImg;
+        
         
         //  Connect to Anchorpoint window
         private Label descriptionConnectWin;
@@ -110,7 +113,6 @@ namespace Anchorpoint.Editor
 
         private void RefreshView()
         {
-            // DeregisteringBtnFunctions();
             if (PluginInitializer.IsNotAnchorpointProject)
             {
                 ShowNoProjectError();
@@ -838,6 +840,8 @@ namespace Anchorpoint.Editor
             connectToAnchorpoint.text = "Connect to Anchorpoint";
             descriptionConnectWin.text = "Connect to Anchorpoint to commit and view the status of files from within Unity.";
             
+            connectToAnchorpoint.SetEnabled(true);
+            
             connectToAnchorpoint.clickable.clicked -= ConnectToAnchorPoint;
             helpConeectWindButton.clickable.clicked -= Help;
             
@@ -887,6 +891,9 @@ namespace Anchorpoint.Editor
             revertButton.SetEnabled(false);
 
             refreshButton = root.Q<Button>("Refresh");
+            loadingImg = root.Q<VisualElement>("LoadingImg");
+            refreshImg = root.Q<VisualElement>("RefreshImg");
+            
             disconnectButton = root.Q<Button>("Disconnect");
             helpConnectedWinButton = root.Q<Button>("ConnectedHelp");
 
@@ -941,6 +948,9 @@ namespace Anchorpoint.Editor
                     AnchorpointLogger.LogWarning("No files selected for revert.");
                 }
             };
+
+            loadingImg.style.display = DisplayStyle.None;
+            refreshImg.style.display = DisplayStyle.Flex;
             
             allButton.clickable.clicked += () => { SetAllCheckboxes(true); };
             noneButton.clickable.clicked += () => { SetAllCheckboxes(false); };
@@ -967,12 +977,19 @@ namespace Anchorpoint.Editor
             
             reConnectToAnchorpoint = root.Q<Button>("ReconnectToAnchorpoint");
             
+            reConnectToAnchorpoint.SetEnabled(true);
+            
             reConnectToAnchorpoint.clickable.clicked -= PluginInitializer.StartConnection;
-            reConnectToAnchorpoint.clickable.clicked += PluginInitializer.StartConnection;
+            reConnectToAnchorpoint.clickable.clicked += () => {
+                PluginInitializer.StartConnection();
+                reConnectToAnchorpoint.SetEnabled(false);
+            };
         }
 
         private void Refresh()
         {
+            loadingImg.style.display = DisplayStyle.Flex;
+            refreshImg.style.display = DisplayStyle.None;
             CLIWrapper.Status();
         }
 
@@ -1004,6 +1021,7 @@ namespace Anchorpoint.Editor
             {
                 PluginInitializer.StartConnection();
                 connectToAnchorpoint.text = "Connecting...";
+                connectToAnchorpoint.SetEnabled(false);
             }
         }
 
