@@ -533,11 +533,79 @@ namespace Anchorpoint.Editor
                     }
                 }
             };
-
-            if (status.NotStaged != null)
-                addFilesToStructure(status.NotStaged, projectRoot);
-
+            
+            Dictionary<string, string> combined = CombineStagedAndUnstaged(status.Staged, status.NotStaged);
+            addFilesToStructure(combined, projectRoot);
+            
             return projectRoot;
+        }
+        
+        private Dictionary<string, string> CombineStagedAndUnstaged(Dictionary<string, string> stagedFiles, Dictionary<string, string> notStagedFiles)
+        {
+            Dictionary<string, string> combined = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+            // Merge staged files
+            if (stagedFiles != null)
+            {
+                foreach (var kvp in stagedFiles)
+                {
+                    combined[kvp.Key] = kvp.Value;
+                }
+            }
+
+            // Merge not staged files
+            if (notStagedFiles != null)
+            {
+                foreach (var kvp in notStagedFiles)
+                {
+                    if (!combined.ContainsKey(kvp.Key))
+                    {
+                        // Not in combined yet; just add it
+                        combined[kvp.Key] = kvp.Value;
+                    }
+                    else
+                    {
+                        // It's in both dictionaries. Resolve the final status
+                        string existingStatus = combined[kvp.Key];
+                        string newStatus = kvp.Value;
+                        combined[kvp.Key] = ResolveUnionStatus(existingStatus, newStatus);
+                    }
+                }
+            }
+
+            return combined;
+        }
+        
+        /// <summary>
+        /// Merges two status strings for the same file and returns a unified status.
+        ///  resolving conflicts via ResolveUnionStatus when a file appears in both.
+        ///  - "A" + "M" => "M"
+        ///  - "M" + "M" => "M"
+        ///  - "A" + "A" => "A"
+        ///  - "D" (deleted) has highest priority
+        ///  - "M" (modified) is next
+        ///  - "A" (added) is lowest
+        /// </summary>
+        private string ResolveUnionStatus(string existingStatus, string newStatus)
+        {
+            // Put the statuses in a small set for easy checks
+            var statuses = new HashSet<string> { existingStatus, newStatus };
+
+            // If either state is "D" (Deleted), that usually takes precedence
+            if (statuses.Contains("D"))
+                return "D";
+
+            // If either state is "M" (Modified), we unify as "M"
+            if (statuses.Contains("M"))
+                return "M";
+
+            // If either state is "A" (Added), unify as "A"
+            if (statuses.Contains("A"))
+                return "A";
+
+            // Otherwise, fall back to the existing status 
+            // (or newStatus, or even "Unknown" if you prefer)
+            return existingStatus;
         }
 
         private void SetAllCheckboxes(bool isChecked)
@@ -949,6 +1017,7 @@ namespace Anchorpoint.Editor
                 }
             };
 
+            refreshButton.SetEnabled(true);
             loadingImg.style.display = DisplayStyle.None;
             refreshImg.style.display = DisplayStyle.Flex;
             
@@ -988,6 +1057,7 @@ namespace Anchorpoint.Editor
 
         private void Refresh()
         {
+            refreshButton.SetEnabled(false);
             loadingImg.style.display = DisplayStyle.Flex;
             refreshImg.style.display = DisplayStyle.None;
             CLIWrapper.Status();

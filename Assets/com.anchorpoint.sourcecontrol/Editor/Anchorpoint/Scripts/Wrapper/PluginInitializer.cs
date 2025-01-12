@@ -149,7 +149,6 @@ namespace Anchorpoint.Wrapper
             }
 
             RefreshView?.Invoke();
-            EditorApplication.RepaintProjectWindow();
         }
 
         private static void StartStatusPolling()
