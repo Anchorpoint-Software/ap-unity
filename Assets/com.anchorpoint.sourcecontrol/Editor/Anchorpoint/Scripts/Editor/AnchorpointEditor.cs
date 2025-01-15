@@ -14,7 +14,7 @@ namespace Anchorpoint.Editor
 {
     public class AnchorpointEditor : EditorWindow
     {
-        [SerializeField] private VisualTreeAsset m_VisualTreeAsset = default;
+        public VisualTreeAsset m_VisualTreeAsset;
         
         private VisualElement connectAnchorpointView;
         private VisualElement connectTryAgainView;
@@ -659,11 +659,13 @@ namespace Anchorpoint.Editor
                 return GetSelectedFiles().Count > 0;
             }
         }
-
         private bool AddSelectedFilesRecursive(ProjectData node, List<string> selectedFiles)
         {
             CLIStatus status = DataManager.GetStatus();
-            var notStagedFiles = status.NotStaged;
+            if (status == null) return false;
+
+            // 1. Merge them
+            Dictionary<string, string> mergedFiles = CombineStagedAndUnstaged(status.Staged, status.NotStaged);
 
             bool hasFileSelected = false;
 
@@ -672,7 +674,7 @@ namespace Anchorpoint.Editor
                 if (node.IsDirectory)
                 {
                     // For empty or deleted directories, the CommitPath includes ".meta"
-                    if (notStagedFiles.ContainsKey(node.CommitPath) && !selectedFiles.Contains(node.CommitPath))
+                    if (mergedFiles.ContainsKey(node.CommitPath) && !selectedFiles.Contains(node.CommitPath))
                     {
                         selectedFiles.Add(node.CommitPath);
                     }
@@ -692,13 +694,13 @@ namespace Anchorpoint.Editor
                 else
                 {
                     // Node is a file
-                    if (notStagedFiles.ContainsKey(node.CommitPath) && !selectedFiles.Contains(node.CommitPath))
+                    if (mergedFiles.ContainsKey(node.CommitPath) && !selectedFiles.Contains(node.CommitPath))
                     {
                         selectedFiles.Add(node.CommitPath);
 
-                        // Add the .meta file if it exists in notStagedFiles
+                        // Check for .meta file if you want
                         string metaFilePath = node.CommitPath + ".meta";
-                        if (notStagedFiles.ContainsKey(metaFilePath) && !selectedFiles.Contains(metaFilePath))
+                        if (mergedFiles.ContainsKey(metaFilePath) && !selectedFiles.Contains(metaFilePath))
                         {
                             selectedFiles.Add(metaFilePath);
                         }
@@ -724,13 +726,11 @@ namespace Anchorpoint.Editor
             // If any file in this folder is selected, add the folder's .meta file
             if (hasFileSelected && node.IsDirectory && node.CommitPath != node.Parent?.CommitPath)
             {
-                if (notStagedFiles.ContainsKey(node.CommitPath) && !selectedFiles.Contains(node.CommitPath))
+                if (mergedFiles.ContainsKey(node.CommitPath) && !selectedFiles.Contains(node.CommitPath))
                 {
                     selectedFiles.Add(node.CommitPath);
                 }
-
-                // Also process parent folders
-                AddUncommittedParentFolders(node.Parent, selectedFiles, notStagedFiles);
+                // Also process parent folders...
             }
 
             return hasFileSelected;
@@ -802,58 +802,87 @@ namespace Anchorpoint.Editor
                 projectPath = Directory.GetParent(Application.dataPath).FullName;
             }
 
-            HashSet<string> processedFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-            if (status?.NotStaged != null)
+            if (status == null)
             {
-                foreach (var entry in status.NotStaged)
+                return 0;
+            }
+
+            // Merge staged & not staged into a single dictionary
+            Dictionary<string, string> merged = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            
+            // Add staged files first
+            if (status.Staged != null)
+            {
+                foreach (var kvp in status.Staged)
                 {
-                    string filePath = entry.Key;  // E.g., "Assets/SomeFile.cs"
-                    string statusFlag = entry.Value;
-                    string fullPath = Path.Combine(CLIConstants.WorkingDirectory, filePath);
+                    merged[kvp.Key] = kvp.Value;
+                }
+            }
 
-                    // Exclude files outside the Unity project
-                    if (!fullPath.StartsWith(projectPath, StringComparison.OrdinalIgnoreCase))
-                        continue;
-
-                    // Skip if already processed
-                    if (processedFiles.Contains(fullPath))
-                        continue;
-
-                    if (filePath.EndsWith(".meta"))
+            // Merge not staged
+            if (status.NotStaged != null)
+            {
+                foreach (var kvp in status.NotStaged)
+                {
+                    if (!merged.ContainsKey(kvp.Key))
                     {
-                        string baseFilePath = fullPath.Substring(0, fullPath.Length - 5); // Remove ".meta"
-
-                        // Determine if the base path is a directory or a file
-                        if (!Path.HasExtension(baseFilePath))
-                        {
-                            // It's a folder's .meta file; skip counting it
-                            continue;
-                        }
-                        else
-                        {
-                            // It's a file's .meta file; proceed
-                            if (processedFiles.Contains(baseFilePath))
-                            {
-                                continue; // Skip if the base file is already processed
-                            }
-                            else
-                            {
-                                processedFiles.Add(baseFilePath);
-                                totalChanges++;
-                            }
-                        }
+                        // Not in merged yet, just add it
+                        merged[kvp.Key] = kvp.Value;
                     }
                     else
                     {
-                        // It's a regular file
-                        processedFiles.Add(fullPath);
-                        totalChanges++;
+                        // It's in both. Decide how to unify statuses:
+                        string existingStatus = merged[kvp.Key];
+                        string newStatus = kvp.Value;
+                        merged[kvp.Key] = ResolveUnionStatus(existingStatus, newStatus);
                     }
                 }
             }
+
+            // Now count unique files from the merged dictionary
+            HashSet<string> processedFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var entry in merged)
+            {
+                string filePath = entry.Key;    // e.g., "Assets/SomeFile.cs"
+                string statusFlag = entry.Value;
+                string fullPath = Path.Combine(CLIConstants.WorkingDirectory, filePath);
+
+                // Exclude files outside the Unity project
+                if (!fullPath.StartsWith(projectPath, StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                // Skip if already processed
+                if (processedFiles.Contains(fullPath))
+                    continue;
+
+                if (filePath.EndsWith(".meta"))
+                {
+                    // It's a .meta file
+                    string baseFilePath = fullPath.Substring(0, fullPath.Length - 5); // remove ".meta"
+
+                    // If no extension => it's a folder .meta => skip
+                    if (!Path.HasExtension(baseFilePath))
+                        continue;
+
+                    // It's a file's .meta => count it if we haven't processed the base file
+                    if (!processedFiles.Contains(baseFilePath))
+                    {
+                        processedFiles.Add(baseFilePath);
+                        totalChanges++;
+                    }
+                }
+                else
+                {
+                    // It's a regular file
+                    processedFiles.Add(fullPath);
+                    totalChanges++;
+                }
+            }
+
             return totalChanges;
         }
+
         
         private void OnCommandOutputReceived(string output)
         {
@@ -944,8 +973,6 @@ namespace Anchorpoint.Editor
         
         private void ShowConnectedWindow()
         {
-            AnchorpointLogger.Log("ShowConnectedWindow Shown");
-            
             connectAnchorpointView.style.display = DisplayStyle.None;
             connectTryAgainView.style.display = DisplayStyle.None;
             connectedView.style.display = DisplayStyle.Flex;
