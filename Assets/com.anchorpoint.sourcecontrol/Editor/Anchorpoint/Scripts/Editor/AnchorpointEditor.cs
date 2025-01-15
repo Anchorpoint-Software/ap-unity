@@ -14,7 +14,7 @@ namespace Anchorpoint.Editor
 {
     public class AnchorpointEditor : EditorWindow
     {
-        public VisualTreeAsset m_VisualTreeAsset;
+        [SerializeField] private VisualTreeAsset m_VisualTreeAsset = default;
         
         private VisualElement connectAnchorpointView;
         private VisualElement connectTryAgainView;
@@ -80,7 +80,11 @@ namespace Anchorpoint.Editor
 
         private void OnEditorUpdate()
         {
+            AnchorpointLogger.LogWarning("Hamza " + CLIWrapper.isWindowActive + "  first block");
+            
             if (!CLIWrapper.isWindowActive) return;
+            
+            AnchorpointLogger.LogWarning("Hamza " + CLIWrapper.isWindowActive + "  Second block");
             rootVisualElement.Clear();
             CreateGUI();
         }

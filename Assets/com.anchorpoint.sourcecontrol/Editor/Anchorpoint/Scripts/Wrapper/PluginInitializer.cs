@@ -149,7 +149,8 @@ namespace Anchorpoint.Wrapper
             }
 
             RefreshView?.Invoke();
-            EditorApplication.RepaintProjectWindow();
+            
+            AnchorpointLogger.LogWarning("Refresh View Called");
         }
 
         private static void StartStatusPolling()
