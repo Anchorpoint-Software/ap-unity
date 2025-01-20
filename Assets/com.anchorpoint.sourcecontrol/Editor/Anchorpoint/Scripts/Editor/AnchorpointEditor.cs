@@ -80,11 +80,11 @@ namespace Anchorpoint.Editor
 
         private void OnEditorUpdate()
         {
-            AnchorpointLogger.LogWarning("Hamza " + CLIWrapper.isWindowActive + "  first block");
+            AnchorpointLogger.LogWarning( CLIWrapper.isWindowActive.ToString());
             
             if (!CLIWrapper.isWindowActive) return;
             
-            AnchorpointLogger.LogWarning("Hamza " + CLIWrapper.isWindowActive + "  Second block");
+            AnchorpointLogger.LogWarning( CLIWrapper.isWindowActive.ToString());
             rootVisualElement.Clear();
             CreateGUI();
         }
@@ -169,9 +169,16 @@ namespace Anchorpoint.Editor
                 var checkbox = new Toggle { name = "checkbox" };
                 checkbox.style.marginRight = 5;
                 checkbox.style.marginTop = 3.5f;
-
+               
                 checkbox.RegisterCallback<ChangeEvent<bool>>(evt =>
                 {
+                    if (inProcess)
+                    {
+                        // Revert the toggle to the old state
+                        checkbox.SetValueWithoutNotify(!evt.newValue);
+                        return;
+                    }
+                    
                     var itemData = (ProjectData)checkbox.userData;
                     itemData.IsChecked = evt.newValue;
 
@@ -210,6 +217,7 @@ namespace Anchorpoint.Editor
 
                 var checkbox = element.Q<Toggle>("checkbox");
                 checkbox.userData = itemData;
+                
                 checkbox.SetValueWithoutNotify(itemData.IsChecked);
 
                 var icon = element.Q<Image>("icon");
@@ -903,6 +911,7 @@ namespace Anchorpoint.Editor
                 if (btnStr == "Status Command Completed")
                 {
                     inProcess = false;
+                    ChangingUIInProgress(true);
                     OnRevertComplete();
                 }
             };
@@ -1017,9 +1026,7 @@ namespace Anchorpoint.Editor
                 if (IsAnyFileSelected())
                 {
                     inProcess = true;
-                    commitButton.SetEnabled(false);
-                    revertButton.SetEnabled(false);
-                    commitMessageField.SetEnabled(false);
+                    ChangingUIInProgress(false);
                     commitButton.text = "Processing changes…";
                     CLIWrapper.Sync(commitMessage, filesToCommit.ToArray());
                 }
@@ -1036,9 +1043,7 @@ namespace Anchorpoint.Editor
                 if (IsAnyFileSelected())
                 {
                     inProcess = true;
-                    commitButton.SetEnabled(false);
-                    revertButton.SetEnabled(false);
-                    commitMessageField.SetEnabled(false);
+                    ChangingUIInProgress(false);
                     revertButton.text = "Reverting...";
                     CLIWrapper.Revert(filesToRevert.ToArray());
                 }
@@ -1048,7 +1053,6 @@ namespace Anchorpoint.Editor
                 }
             };
 
-            refreshButton.SetEnabled(true);
             loadingImg.style.display = DisplayStyle.None;
             refreshImg.style.display = DisplayStyle.Flex;
             
@@ -1088,10 +1092,10 @@ namespace Anchorpoint.Editor
 
         private void Refresh()
         {
-            refreshButton.SetEnabled(false);
             loadingImg.style.display = DisplayStyle.Flex;
             refreshImg.style.display = DisplayStyle.None;
             CLIWrapper.Status();
+            ChangingUIInProgress(false);
         }
 
         private void Disconnect()
@@ -1136,6 +1140,18 @@ namespace Anchorpoint.Editor
             descriptionConnectWin.text = validatingDescription;
 
             return false;
+        }
+
+        private void ChangingUIInProgress(bool flag)
+        {
+            allButton.SetEnabled(flag);
+            noneButton.SetEnabled(flag);
+            refreshButton.SetEnabled(flag);
+            disconnectButton.SetEnabled(flag);
+            helpConnectedWinButton.SetEnabled(flag);
+            commitMessageField.SetEnabled(flag);
+            commitButton.SetEnabled(flag);
+            revertButton.SetEnabled(flag);
         }
     }
 }

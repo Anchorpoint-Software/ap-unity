@@ -19,7 +19,7 @@ namespace Anchorpoint.Wrapper
         private const string WasConnectedKey = "Anchorpoint_WasConnected";
         
         private static double lastConnectionCheckTime = 0;
-        private const double connectionCheckInterval = 15.0; // Check every 10 seconds
+        private const double connectionCheckInterval = 30.0; // Check every 10 seconds
         public static event Action RefreshView;
 
         public static bool WasConnected
