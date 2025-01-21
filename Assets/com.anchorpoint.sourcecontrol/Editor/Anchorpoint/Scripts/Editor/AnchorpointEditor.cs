@@ -1007,7 +1007,7 @@ namespace Anchorpoint.Editor
 
             changesLabel = root.Q<Label>("ChangeCountLabel");
             int totalChanges = CalculateTotalChanges();
-            changesLabel.text = $"Total Changes: {totalChanges}";
+            changesLabel.text = $"Changed Files: {totalChanges}";
 
             allButton = root.Q<Button>("AllButton");
             noneButton = root.Q<Button>("NoneButton");
