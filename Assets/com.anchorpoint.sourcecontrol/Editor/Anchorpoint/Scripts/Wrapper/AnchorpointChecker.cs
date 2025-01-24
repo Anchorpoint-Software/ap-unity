@@ -1,14 +1,14 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using Anchorpoint.Constants;
 using Anchorpoint.Logger;
 using UnityEngine;
 
 public static class AnchorpointChecker
 {
-    private const string anchorpointMacAppPath = "/Applications/Anchorpoint.app";
-    private const string anchorpointWinAppPath = "Anchorpoint\\Anchorpoint.exe";
-    
+    private static readonly string anchorpointExecutablePath = CLIConstants.AnchorpointExecutablePath;
+
     public static bool IsAnchorpointInstalled()
     {
         if (Application.platform == RuntimePlatform.WindowsEditor)
@@ -25,13 +25,13 @@ public static class AnchorpointChecker
 
     private static bool IsAnchorpointInstalledWindows()
     {
-        string cliPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), anchorpointWinAppPath);
+        string cliPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), anchorpointExecutablePath);
         return File.Exists(cliPath);
     }
 
     private static bool IsAnchorpointInstalledMac()
     {
-        return Directory.Exists(anchorpointMacAppPath);
+        return Directory.Exists(anchorpointExecutablePath);
     }
 
     public static void OpenAnchorpointApplication()
@@ -39,7 +39,7 @@ public static class AnchorpointChecker
         if (Application.platform == RuntimePlatform.WindowsEditor)
         {
             string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-            string exePath = Path.Combine(localAppData, anchorpointWinAppPath);
+            string exePath = Path.Combine(localAppData, anchorpointExecutablePath);
             if (File.Exists(exePath))
             {
                 Process.Start(exePath);
@@ -51,9 +51,9 @@ public static class AnchorpointChecker
         }
         else if (Application.platform == RuntimePlatform.OSXEditor)
         {
-            if (Directory.Exists(anchorpointMacAppPath))
+            if (Directory.Exists(anchorpointExecutablePath))
             {
-                Process.Start("open", anchorpointMacAppPath);
+                Process.Start("open", anchorpointExecutablePath);
             }
             else
             {

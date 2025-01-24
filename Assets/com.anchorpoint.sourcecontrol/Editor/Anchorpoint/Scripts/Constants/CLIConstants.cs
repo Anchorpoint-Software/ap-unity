@@ -10,8 +10,11 @@ namespace Anchorpoint.Constants
     public static class CLIConstants
     {
         private const string APIVersion = "--apiVersion 1";
+        private const string cliPath = "/Applications/Anchorpoint.app/Contents/Frameworks/ap";
         public static string CLIPath {get; private set;} = null;
         private static string CLIVersion {get; set;} = null;
+
+        public static string AnchorpointExecutablePath => GetAnchorpointExecutablePath();
 
         /// <summary>
         /// Originally the current working directory will be the Unity project parent directory so this is implemented as that to get the CWD 
@@ -141,8 +144,6 @@ namespace Anchorpoint.Constants
             }
             else if (Environment.OSVersion.Platform == PlatformID.Unix || Environment.OSVersion.Platform == PlatformID.MacOSX)
             {
-                string cliPath = "/Applications/Anchorpoint.app/Contents/Frameworks/ap";
-
                 if (File.Exists(cliPath))
                 {
                     CLIPath = cliPath;
@@ -179,6 +180,41 @@ namespace Anchorpoint.Constants
             if (!string.IsNullOrEmpty(twoLevelsUp) && File.Exists(Path.Combine(twoLevelsUp, ".gitignore")))
             {
                 return twoLevelsUp;
+            }
+
+            return null;
+        }
+        
+        private static string GetAnchorpointExecutablePath()
+        {
+            switch (Application.platform)
+            {
+                case RuntimePlatform.WindowsEditor:
+                {
+                    string basePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Anchorpoint");
+                    string pattern = @"app-(\d+\.\d+\.\d+)";
+                    string executableName = "Anchorpoint.exe";
+
+                    var versionedDirectories = Directory.GetDirectories(basePath)
+                        .Where(d => Regex.IsMatch(Path.GetFileName(d), pattern))
+                        .OrderByDescending(d => Version.Parse(Regex.Match(d, pattern).Groups[1].Value))
+                        .ToList();
+
+                    if (versionedDirectories.Any())
+                    {
+                        string latestVersionPath = versionedDirectories.First();
+                        string latestVersion = Regex.Match(latestVersionPath, pattern).Groups[1].Value;
+                        string exePath = Path.Combine(latestVersionPath, executableName);
+
+                        if (File.Exists(exePath))
+                        {
+                            return exePath;
+                        }
+                    }
+                    break;
+                }
+                case RuntimePlatform.OSXEditor:
+                    return "/Applications/Anchorpoint.app";
             }
 
             return null;
