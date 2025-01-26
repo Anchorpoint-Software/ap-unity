@@ -5,6 +5,7 @@ using Anchorpoint.Parser;
 using Anchorpoint.Constants;
 using System.Collections.Generic;
 using System.Threading;
+using Anchorpoint.Events;
 using Anchorpoint.Logger;
 using UnityEditor;
 
@@ -15,13 +16,12 @@ namespace Anchorpoint.Wrapper
     public static class CLIWrapper
     {
         private static string Output { get; set; }
-        public static Action RefreshWindow;
 
         private static CommandQueue _commandQueue = new CommandQueue();
         private static bool isStatusQueuedAfterCommand = false;  // Track when Status should be queued
         private static bool isRefreshing = false;                // Flag for refresh control
         private static readonly Queue<Action> refreshQueue = new Queue<Action>();  // Queue to manage refresh actions
-        public static event Action<string> OnCommandOutputReceived;
+        
         public static bool isWindowActive = false;
         public static void CLIPath() => AnchorpointLogger.Log(CLIConstants.CLIPath);
 
@@ -223,7 +223,7 @@ namespace Anchorpoint.Wrapper
                         if (!string.IsNullOrEmpty(e.Data))
                         {
                             AnchorpointLogger.Log($"Output: {e.Data}");
-                            OnCommandOutputReceived?.Invoke($"{ExtractInformation(e.Data)}");
+                            AnchorpointEvents.RaiseCommandOutputReceived($"{ExtractInformation(e.Data)}");
                             AddOutput($"\n\nOutput:\n{e.Data}");
                         }
                     };
@@ -235,7 +235,7 @@ namespace Anchorpoint.Wrapper
                     if (!string.IsNullOrEmpty(errorOutput))
                     {
                         AnchorpointLogger.Log($"Output: {errorOutput}");
-                        OnCommandOutputReceived?.Invoke($"Output: {errorOutput}");
+                        AnchorpointEvents.RaiseCommandOutputReceived($"Output: {errorOutput}");
                         AddOutput($"\n\nOutput:\n{errorOutput}");
                         ProcessOutput(command, errorOutput, callback);
                     }
@@ -243,7 +243,7 @@ namespace Anchorpoint.Wrapper
 
                 process.WaitForExit();
                 AnchorpointLogger.Log($"{command} Command Completed");
-                OnCommandOutputReceived?.Invoke($"{command} Command Completed");
+                AnchorpointEvents.RaiseCommandOutputReceived($"{command} Command Completed");
                 AddOutput($"\n\n{command} Command Completed");
 
                 // Execute Status only after all other commands have completed
@@ -267,18 +267,15 @@ namespace Anchorpoint.Wrapper
             // Add the refresh action to the queue
             refreshQueue.Enqueue(() =>
             {
-                if (RefreshWindow != null)
+                EditorApplication.delayCall += () =>
                 {
-                    EditorApplication.delayCall += () =>
+                    if (command == Command.Status)
                     {
-                        if (command == Command.Status)
-                        {
-                            
-                            AnchorpointLogger.LogWarning("Refresh called");
-                            RefreshWindow?.Invoke();
-                        }
-                    };
-                }
+                        
+                        AnchorpointLogger.LogWarning("Refresh called");
+                        AnchorpointEvents.RaiseRefreshWindow();
+                    }
+                };
             });
 
             // If no refresh is currently running, process the next one

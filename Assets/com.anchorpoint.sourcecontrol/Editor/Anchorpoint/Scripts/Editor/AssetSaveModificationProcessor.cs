@@ -79,7 +79,7 @@ namespace Anchorpoint.Editor
         private static string GetCommitPath(string path)
         {
             // Calculate the root relative path for commit path conversion
-            string projectPath = Directory.GetParent(Application.dataPath).FullName;
+            string projectPath = Directory.GetParent(Application.dataPath)?.FullName;
             rootRelativePath = projectPath.Substring(CLIConstants.WorkingDirectory.Length).TrimStart(Path.DirectorySeparatorChar);
 
             // Combine the root relative path with the original path to create the commit path

@@ -4,6 +4,7 @@ using System.Text;
 using System.Threading;
 using System.Collections.Generic;
 using Anchorpoint.Constants;
+using Anchorpoint.Events;
 using Anchorpoint.Logger;
 using Newtonsoft.Json;
 using UnityEditor;
@@ -20,8 +21,6 @@ namespace Anchorpoint.Wrapper
         // Thread-safe queue to store actions to be executed on the main thread
         private static readonly Queue<Action> mainThreadActions = new Queue<Action>();
         private static readonly object queueLock = new object();
-
-        public event Action<ConnectMessage> OnMessageReceived;
 
         private StringBuilder jsonBuffer = new StringBuilder();
         private int braceCount = 0;
@@ -133,7 +132,7 @@ namespace Anchorpoint.Wrapper
                     {
                         lock (queueLock)
                         {
-                            mainThreadActions.Enqueue(() => OnMessageReceived?.Invoke(message));
+                            mainThreadActions.Enqueue(() => AnchorpointEvents.RaiseMessageReceived(message));
                         }
                     }
                 }
@@ -170,13 +169,5 @@ namespace Anchorpoint.Wrapper
         {
             return isRunning && connectProcess != null && !connectProcess.HasExited;
         }
-    }
-
-    [Serializable]
-    public class ConnectMessage
-    {
-        public string id;
-        public string type;
-        public List<string> files;
     }
 }

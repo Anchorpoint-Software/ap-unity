@@ -5,6 +5,7 @@ using Anchorpoint.Logger;
 using UnityEngine;
 using Unity.EditorCoroutines.Editor;
 using UnityEngine.Networking;
+using Anchorpoint.Events;
 
 namespace Anchorpoint.Parser
 {
@@ -19,8 +20,6 @@ namespace Anchorpoint.Parser
         private static Dictionary<string, string> emailToPictureUrl = new Dictionary<string, string>();
         private static Dictionary<string, Texture2D> emailToPictureTexture = new Dictionary<string, Texture2D>();
         
-        // Event to notify when status is updated
-        public static event Action OnStatusUpdated;
         private static List<CLIUser> userList;
 
         public static CLIStatus GetStatus()
@@ -55,7 +54,7 @@ namespace Anchorpoint.Parser
                     if (_status.LockedFiles != null)
                     {
                         _lockFiles = new Dictionary<string, string>(_status.LockedFiles);
-                        OnStatusUpdated?.Invoke();
+                        AnchorpointEvents.RaiseStatusUpdated();
                     }
                     else
                     {
@@ -66,7 +65,7 @@ namespace Anchorpoint.Parser
                     if (_status.OutdatedFiles != null)
                     {
                         outdatedFiles = new HashSet<string>(_status.OutdatedFiles);
-                        OnStatusUpdated?.Invoke();
+                        AnchorpointEvents.RaiseStatusUpdated();
                     }
                     else
                     {

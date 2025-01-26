@@ -5,6 +5,7 @@ using UnityEditor;
 using UnityEngine;
 using Anchorpoint.Parser;
 using Anchorpoint.Constants;
+using Anchorpoint.Events;
 using Anchorpoint.Wrapper;
 
 namespace Anchorpoint.Editor
@@ -35,7 +36,7 @@ namespace Anchorpoint.Editor
         static AssetStatusIconDrawer()
         {
             EditorApplication.projectWindowItemOnGUI += OnProjectWindowItemOnGUI;
-            DataManager.OnStatusUpdated += OnStatusUpdated;
+            AnchorpointEvents.OnStatusUpdated += OnStatusUpdated;
 
             // Continuously access the PersistentReferences to keep them alive
             EditorApplication.update += KeepReferencesAlive;

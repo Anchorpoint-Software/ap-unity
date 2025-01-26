@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Anchorpoint.Constants;
+using Anchorpoint.Events;
 using Anchorpoint.Logger;
 using Anchorpoint.Parser;
 using Anchorpoint.Wrapper;
@@ -38,7 +39,6 @@ namespace Anchorpoint.Editor
         private VisualElement loadingImg;
         private VisualElement refreshImg;
         
-        
         //  Connect to Anchorpoint window
         private Label descriptionConnectWin;
         private Button connectToAnchorpoint;
@@ -62,29 +62,32 @@ namespace Anchorpoint.Editor
         private const string noProjectErrorDescription = "This Unity project is not maintained by Anchorpoint. You will need to create a project first.\n\nCheck the documentation for help.";
         private const string validatingDescription = "Anchorpoint’s desktop application is not available.\n\nCheck the documentation for help.";
         
+        // Now count unique files from the merged dictionary
+        private HashSet<string> processedFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        
         private bool inProcess = false;      // Flag to check is if some commit/revert is in process
         
         private void OnEnable()
         {
-            CLIWrapper.RefreshWindow += OnEditorUpdate;
-            CLIWrapper.OnCommandOutputReceived += OnCommandOutputReceived;
+            AnchorpointEvents.RefreshWindow += OnEditorUpdate;
+            AnchorpointEvents.OnCommandOutputReceived += OnCommandOutputReceived;
             PluginInitializer.RefreshView += RefreshView;
         }
 
         private void OnDisable()
         {
-            CLIWrapper.RefreshWindow -= OnEditorUpdate;
-            CLIWrapper.OnCommandOutputReceived -= OnCommandOutputReceived;
+            AnchorpointEvents.RefreshWindow -= OnEditorUpdate;
+            AnchorpointEvents.OnCommandOutputReceived -= OnCommandOutputReceived;
             PluginInitializer.RefreshView -= RefreshView;
         }
 
         private void OnEditorUpdate()
         {
-            AnchorpointLogger.LogWarning( CLIWrapper.isWindowActive.ToString());
+            AnchorpointLogger.Log( CLIWrapper.isWindowActive.ToString());
             
             if (!CLIWrapper.isWindowActive) return;
             
-            AnchorpointLogger.LogWarning( CLIWrapper.isWindowActive.ToString());
+            AnchorpointLogger.Log( CLIWrapper.isWindowActive.ToString());
             rootVisualElement.Clear();
             CreateGUI();
         }
@@ -851,9 +854,6 @@ namespace Anchorpoint.Editor
                 }
             }
 
-            // Now count unique files from the merged dictionary
-            HashSet<string> processedFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
             foreach (var entry in merged)
             {
                 string filePath = entry.Key;    // e.g., "Assets/SomeFile.cs"
@@ -894,7 +894,6 @@ namespace Anchorpoint.Editor
 
             return totalChanges;
         }
-
         
         private void OnCommandOutputReceived(string output)
         {

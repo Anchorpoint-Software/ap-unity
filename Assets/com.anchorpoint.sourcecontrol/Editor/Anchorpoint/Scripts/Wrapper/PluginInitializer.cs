@@ -2,6 +2,7 @@ using System;
 using UnityEditor;
 using Anchorpoint.Logger;
 using System.Timers;
+using Anchorpoint.Events;
 using Anchorpoint.Parser;
 
 namespace Anchorpoint.Wrapper
@@ -43,7 +44,7 @@ namespace Anchorpoint.Wrapper
             if (connectHandler == null)
             {
                 connectHandler = new ConnectCommandHandler();
-                connectHandler.OnMessageReceived += OnConnectMessageReceived;
+                AnchorpointEvents.OnMessageReceived += OnConnectMessageReceived;
             }
         }
 
@@ -150,7 +151,7 @@ namespace Anchorpoint.Wrapper
 
             RefreshView?.Invoke();
             
-            AnchorpointLogger.LogWarning("Refresh View Called");
+            AnchorpointLogger.Log("Refresh View Called");
         }
 
         private static void StartStatusPolling()
