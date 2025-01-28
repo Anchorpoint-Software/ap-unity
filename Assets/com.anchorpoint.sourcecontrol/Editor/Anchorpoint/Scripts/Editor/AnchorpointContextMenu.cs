@@ -8,7 +8,7 @@ namespace Anchorpoint.Editor
 {
     public static class AnchorpointContextMenu
     {
-        [MenuItem("Assets/Anchorpoint/Show in Anchorpoint", false, 1000)]
+        [MenuItem("Assets/Show in Anchorpoint", false, 1000)]
         private static void ShowInAnchorpoint()
         {
             string[] selectedGuids = Selection.assetGUIDs;
@@ -31,7 +31,7 @@ namespace Anchorpoint.Editor
                     }
                     else
                     {
-                        Process.Start(ReturnPath(), fullPath);
+                        Process.Start(ReturnPath(), $"\"{fullPath}\"");
                     }
 
                     AnchorpointLogger.Log($"Opening file in Anchorpoint: {fullPath}");
