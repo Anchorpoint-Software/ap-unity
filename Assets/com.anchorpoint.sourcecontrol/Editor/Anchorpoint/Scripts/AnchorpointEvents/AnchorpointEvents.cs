@@ -1,21 +1,23 @@
 using System;
+using Anchorpoint.Logger;
 using Anchorpoint.Wrapper;
 
 namespace Anchorpoint.Events
 {
     public static class AnchorpointEvents
     {
-        // Event to notify when status is updated
         public static event Action OnStatusUpdated;
         public static void RaiseStatusUpdated()
         {
+            AnchorpointLogger.Log("Raise Status Updated Called");
             OnStatusUpdated?.Invoke();
         }
         
-        public static event Action RefreshWindow;
-        public static void RaiseRefreshWindow()
+        public static event Action RefreshTreeWindow;
+        public static void RaiseRefreshTreeWindow()
         {
-            RefreshWindow?.Invoke();
+            AnchorpointLogger.Log("Raise Refresh Window Called");
+            RefreshTreeWindow?.Invoke();
         }
         
         public static event Action<string> OnCommandOutputReceived;
@@ -28,6 +30,13 @@ namespace Anchorpoint.Events
         public static void RaiseMessageReceived(ConnectMessage message)
         {
             OnMessageReceived?.Invoke(message);
+        }
+        
+        public static event Action RefreshView;
+        public static void RaiseRefreshView()
+        {
+            AnchorpointLogger.Log("Raise Refresh View Called");
+            RefreshView?.Invoke();
         }
     }
 }

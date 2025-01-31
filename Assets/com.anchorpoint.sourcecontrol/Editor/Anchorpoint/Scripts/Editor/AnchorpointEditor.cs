@@ -28,6 +28,7 @@ namespace Anchorpoint.Editor
         private TreeView treeView;
         private TextField commitMessageField;
         private Label changesLabel;
+        private Label emptyTreeDescriptionLabel;
         private Label noticeLable;
         private Button commitButton;
         private Button revertButton;
@@ -69,16 +70,16 @@ namespace Anchorpoint.Editor
         
         private void OnEnable()
         {
-            AnchorpointEvents.RefreshWindow += OnEditorUpdate;
+            AnchorpointEvents.RefreshTreeWindow += OnEditorUpdate;  //  Is triggered in QueueRefresh after Status command is executed
             AnchorpointEvents.OnCommandOutputReceived += OnCommandOutputReceived;
-            PluginInitializer.RefreshView += RefreshView;
+            AnchorpointEvents.RefreshView += RefreshView;   // Is triggered in Plugin Initializer after HandleConnectMessage. To change the windows view form Connected/ConnectToAnchorpoint/PauseAnchorpoint/TryAgain
         }
 
         private void OnDisable()
         {
-            AnchorpointEvents.RefreshWindow -= OnEditorUpdate;
+            AnchorpointEvents.RefreshTreeWindow -= OnEditorUpdate;
             AnchorpointEvents.OnCommandOutputReceived -= OnCommandOutputReceived;
-            PluginInitializer.RefreshView -= RefreshView;
+            AnchorpointEvents.RefreshView -= RefreshView;
         }
 
         private void OnEditorUpdate()
@@ -1003,16 +1004,20 @@ namespace Anchorpoint.Editor
             
             disconnectButton = root.Q<Button>("Disconnect");
             helpConnectedWinButton = root.Q<Button>("ConnectedHelp");
-
+            
             changesLabel = root.Q<Label>("ChangeCountLabel");
-            int totalChanges = CalculateTotalChanges();
-            changesLabel.text = $"Changed Files: {totalChanges}";
 
             allButton = root.Q<Button>("AllButton");
             noneButton = root.Q<Button>("NoneButton");
-
+            
+            emptyTreeDescriptionLabel = root.Q<Label>("EmptyTreeDescription");
             treeView = root.Q<TreeView>("TreeView");
-
+            
+            int totalChanges = CalculateTotalChanges();
+            changesLabel.text = totalChanges == 0 ? " No changed files" : $"{totalChanges} changed files";
+            emptyTreeDescriptionLabel.style.display = totalChanges == 0 ? DisplayStyle.Flex : DisplayStyle.None;
+            treeView.style.display = totalChanges == 0 ? DisplayStyle.None : DisplayStyle.Flex;
+            
             noticeLable = root.Q<Label>("Notice");
             noticeLable.style.display = PluginInitializer.IsProjectOpen ? DisplayStyle.None : DisplayStyle.Flex;
             

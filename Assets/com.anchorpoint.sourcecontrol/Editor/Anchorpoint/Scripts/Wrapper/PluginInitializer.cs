@@ -21,7 +21,6 @@ namespace Anchorpoint.Wrapper
         
         private static double lastConnectionCheckTime = 0;
         private const double connectionCheckInterval = 30.0; // Check every 10 seconds
-        public static event Action RefreshView;
 
         public static bool WasConnected
         {
@@ -149,9 +148,7 @@ namespace Anchorpoint.Wrapper
                     break;
             }
 
-            RefreshView?.Invoke();
-            
-            AnchorpointLogger.Log("Refresh View Called");
+            AnchorpointEvents.RaiseRefreshView();
         }
 
         private static void StartStatusPolling()
