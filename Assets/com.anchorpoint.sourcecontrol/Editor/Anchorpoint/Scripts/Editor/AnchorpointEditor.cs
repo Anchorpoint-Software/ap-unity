@@ -809,6 +809,7 @@ namespace Anchorpoint.Editor
 
         private int CalculateTotalChanges()
         {
+            processedFiles.Clear();
             CLIStatus status = DataManager.GetStatus();
             int totalChanges = 0;
 
