@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "displayName": "Anchorpoint",
   "description": "A package that connects Anchorpoint app with Unity",
-  "unity": "2022.3.0f1",
+  "unity": "2022.3",
   "author": {
     "name": "Anchorpoint",
     "email": "contact@anchorpoint.app",
