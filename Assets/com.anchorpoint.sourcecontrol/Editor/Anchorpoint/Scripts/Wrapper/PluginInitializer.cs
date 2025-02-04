@@ -126,6 +126,7 @@ namespace Anchorpoint.Wrapper
                 case "files outdated":
                     break;
                 case "files updated":
+                    CLIWrapper.Status();    //  There is a conflict so run the Status command
                     break;
                 case "project opened":
                     IsProjectOpen = true;

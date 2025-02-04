@@ -30,6 +30,8 @@ namespace Anchorpoint.Editor
         private Label changesLabel;
         private Label emptyTreeDescriptionLabel;
         private Label noticeLable;
+        private Label conflictLable;
+        private Button connectedOpenAnchorpointButton;
         private Button commitButton;
         private Button revertButton;
         private Button allButton;
@@ -67,6 +69,7 @@ namespace Anchorpoint.Editor
         private HashSet<string> processedFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         
         private bool inProcess = false;      // Flag to check is if some commit/revert is in process
+        private bool hasConflict = false;      // Flag to check is if some conflict
         
         private void OnEnable()
         {
@@ -128,6 +131,7 @@ namespace Anchorpoint.Editor
             else if (PluginInitializer.IsInitialized && PluginInitializer.IsConnected)
             {
                 ShowConnectedWindow();
+                HasConflictedFiles();
             }
             else if (PluginInitializer.IsPlaymode && PluginInitializer.WasConnected)
             {
@@ -176,7 +180,7 @@ namespace Anchorpoint.Editor
                
                 checkbox.RegisterCallback<ChangeEvent<bool>>(evt =>
                 {
-                    if (inProcess)
+                    if (inProcess || hasConflict)
                     {
                         // Revert the toggle to the old state
                         checkbox.SetValueWithoutNotify(!evt.newValue);
@@ -994,6 +998,12 @@ namespace Anchorpoint.Editor
             
             // Get the commit message text field and commit button
             commitMessageField = root.Q<TextField>("CommitMessageField");
+            
+            connectedOpenAnchorpointButton = root.Q<Button>("ConnectedOpenAnchorpoint");
+            connectedOpenAnchorpointButton.clickable.clicked -= AnchorpointChecker.OpenAnchorpointApplication;
+            connectedOpenAnchorpointButton.style.display = DisplayStyle.None;
+            connectedOpenAnchorpointButton.clickable.clicked += AnchorpointChecker.OpenAnchorpointApplication;
+            
             commitButton = root.Q<Button>("CommitButton");
             commitButton.SetEnabled(false); // Disable the commit button initially
             revertButton = root.Q<Button>("Revert");
@@ -1021,6 +1031,9 @@ namespace Anchorpoint.Editor
             
             noticeLable = root.Q<Label>("Notice");
             noticeLable.style.display = PluginInitializer.IsProjectOpen ? DisplayStyle.None : DisplayStyle.Flex;
+            
+            conflictLable = root.Q<Label>("ConflictNotice");
+            conflictLable.style.display = DisplayStyle.None;
             
             // When the commit button is clicked, gather selected files and commit them
             commitButton.clickable.clicked += () =>
@@ -1141,12 +1154,12 @@ namespace Anchorpoint.Editor
             {
                 return true;
             }
-
+            
             descriptionConnectWin.text = validatingDescription;
-
+            
             return false;
         }
-
+        
         private void ChangingUIInProgress(bool flag)
         {
             allButton.SetEnabled(flag);
@@ -1157,6 +1170,54 @@ namespace Anchorpoint.Editor
             commitMessageField.SetEnabled(flag);
             commitButton.SetEnabled(flag);
             revertButton.SetEnabled(flag);
+        }
+        
+        private void HasConflictedFiles()
+        {
+            CLIStatus status = DataManager.GetStatus();
+            if (status == null)
+            {
+                return;
+            }
+
+            // Check staged files for conflicts
+            if (status.Staged != null)
+            {
+                foreach (var fileStatus in status.Staged.Values)
+                {
+                    if (fileStatus == "C")
+                    {
+                        hasConflict = true;
+                    }
+                }
+            }
+
+            // Check not staged files for conflicts
+            if (status.NotStaged != null)
+            {
+                foreach (var fileStatus in status.NotStaged.Values)
+                {
+                    if (fileStatus == "C") 
+                    {
+                        hasConflict = true;
+                    }
+                }
+            }
+            
+            if (hasConflict)
+            {
+                ChangingUIInProgress(false);
+                commitMessageField.style.display = DisplayStyle.None;
+                connectedOpenAnchorpointButton.style.display = DisplayStyle.Flex;
+                commitButton.style.display = DisplayStyle.None;
+                revertButton.style.display = DisplayStyle.None;
+                noticeLable.style.display = DisplayStyle.None;
+                conflictLable.style.display = DisplayStyle.Flex;
+            }
+            else
+            {
+                hasConflict = false;
+            }
         }
     }
 }
