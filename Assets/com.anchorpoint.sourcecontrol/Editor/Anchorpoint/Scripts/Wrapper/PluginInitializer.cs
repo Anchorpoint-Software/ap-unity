@@ -20,7 +20,6 @@ namespace Anchorpoint.Wrapper
         private const string WasConnectedKey = "Anchorpoint_WasConnected";
         
         private static double lastConnectionCheckTime = 0;
-        private const double connectionCheckInterval = 60.0; // Check every 60 seconds
 
         public static bool WasConnected
         {
@@ -30,6 +29,11 @@ namespace Anchorpoint.Wrapper
 
         static PluginInitializer()
         {
+            if (!AnchorpointChecker.IsAnchorpointInstalled())
+            {
+                return;
+            }
+
             EditorApplication.delayCall += Initialize;
             AssemblyReloadEvents.beforeAssemblyReload += OnBeforeAssemblyReload;
             AssemblyReloadEvents.afterAssemblyReload += AfterAssemblyReload;
