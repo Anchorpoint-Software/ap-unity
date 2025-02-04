@@ -1,4 +1,4 @@
-using System;
+using System.IO;
 using UnityEditor;
 using Anchorpoint.Logger;
 using System.Timers;
@@ -20,7 +20,7 @@ namespace Anchorpoint.Wrapper
         private const string WasConnectedKey = "Anchorpoint_WasConnected";
         
         private static double lastConnectionCheckTime = 0;
-        private const double connectionCheckInterval = 30.0; // Check every 10 seconds
+        private const double connectionCheckInterval = 60.0; // Check every 60 seconds
 
         public static bool WasConnected
         {
@@ -34,12 +34,17 @@ namespace Anchorpoint.Wrapper
             AssemblyReloadEvents.beforeAssemblyReload += OnBeforeAssemblyReload;
             AssemblyReloadEvents.afterAssemblyReload += AfterAssemblyReload;
             EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
-            EditorApplication.update += PeriodicConnectionCheck;
-            
         }
 
         private static void Initialize()
         {
+            if (HasCompilationErrors())
+            {
+                StopConnection();
+                AnchorpointLogger.LogError("Compilation errors detected. Disabling Anchorpoint.");
+                return;
+            }
+            
             if (connectHandler == null)
             {
                 connectHandler = new ConnectCommandHandler();
@@ -176,23 +181,28 @@ namespace Anchorpoint.Wrapper
             }
         }
 
-        private static void PeriodicConnectionCheck()
+        private static bool HasCompilationErrors()
         {
-            // Get the current time in seconds
-            double currentTime = EditorApplication.timeSinceStartup;
+            string editorLogPath = GetEditorLogPath();
+    
+            if (!File.Exists(editorLogPath)) return false;
 
-            // Check if the interval has passed
-            if (currentTime - lastConnectionCheckTime >= connectionCheckInterval)
-            {
-                lastConnectionCheckTime = currentTime;
+            string logContents = File.ReadAllText(editorLogPath);
+            return logContents.Contains("error CS"); // Checks for C# compiler errors
+        }
 
-                // Perform the connection check
-                if (!IsPlaymode && WasConnected && !IsConnected)
-                {
-                    AnchorpointLogger.Log("Detected disconnection. Attempting to reconnect...");
-                    StartConnection();
-                }
-            }
+        private static string GetEditorLogPath()
+        {
+            string editorLogPath = "";
+
+#if UNITY_EDITOR_WIN
+    editorLogPath = Path.Combine(System.Environment.GetFolderPath(System.Environment.SpecialFolder.LocalApplicationData), "Unity", "Editor", "Editor.log");
+
+#elif UNITY_EDITOR_OSX
+            editorLogPath = Path.Combine(System.Environment.GetFolderPath(System.Environment.SpecialFolder.UserProfile), "Library", "Logs", "Unity", "Editor.log");
+#endif
+
+            return editorLogPath;
         }
     }
 }
