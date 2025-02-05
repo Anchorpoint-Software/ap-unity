@@ -185,15 +185,39 @@ namespace Anchorpoint.Wrapper
             }
         }
 
+        // private static bool HasCompilationErrors()
+        // {
+        //     string editorLogPath = GetEditorLogPath();
+        //
+        //     if (!File.Exists(editorLogPath)) return false;
+        //
+        //     string logContents = File.ReadAllText(editorLogPath);
+        //     return logContents.Contains("error CS"); // Checks for C# compiler errors
+        // }
+        
+        
         private static bool HasCompilationErrors()
         {
             string editorLogPath = GetEditorLogPath();
-    
+
             if (!File.Exists(editorLogPath)) return false;
 
-            string logContents = File.ReadAllText(editorLogPath);
-            return logContents.Contains("error CS"); // Checks for C# compiler errors
+            try
+            {
+                using (FileStream fs = new FileStream(editorLogPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                using (StreamReader reader = new StreamReader(fs))
+                {
+                    string logContents = reader.ReadToEnd();
+                    return logContents.Contains("error CS"); // Check for C# compiler errors
+                }
+            }
+            catch (IOException ex)
+            {
+                AnchorpointLogger.LogError($"Failed to read Editor.log: {ex.Message}");
+                return false; // Assume no errors if we can't read the file
+            }
         }
+
 
         private static string GetEditorLogPath()
         {
