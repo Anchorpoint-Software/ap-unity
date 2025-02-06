@@ -165,9 +165,24 @@ namespace Anchorpoint.Wrapper
             }
         }
         
+        // public bool IsConnected()
+        // {
+        //     return isRunning && connectProcess != null && !connectProcess.HasExited;
+        // }
+        
         public bool IsConnected()
         {
-            return isRunning && connectProcess != null && !connectProcess.HasExited;
+            if (!isRunning || connectProcess == null)
+                return false;
+
+            try
+            {
+                return !connectProcess.HasExited;
+            }
+            catch (InvalidOperationException)
+            {
+                return false; // Process has already exited or is invalid
+            }
         }
     }
 }
