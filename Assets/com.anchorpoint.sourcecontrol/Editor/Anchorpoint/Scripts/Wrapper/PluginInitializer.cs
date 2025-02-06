@@ -1,4 +1,6 @@
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using UnityEditor;
 using Anchorpoint.Logger;
 using System.Timers;
@@ -184,22 +186,10 @@ namespace Anchorpoint.Wrapper
                 CLIWrapper.GetCurrentUser();
             }
         }
-
-        // private static bool HasCompilationErrors()
-        // {
-        //     string editorLogPath = GetEditorLogPath();
-        //
-        //     if (!File.Exists(editorLogPath)) return false;
-        //
-        //     string logContents = File.ReadAllText(editorLogPath);
-        //     return logContents.Contains("error CS"); // Checks for C# compiler errors
-        // }
-        
         
         private static bool HasCompilationErrors()
         {
             string editorLogPath = GetEditorLogPath();
-
             if (!File.Exists(editorLogPath)) return false;
 
             try
@@ -207,8 +197,18 @@ namespace Anchorpoint.Wrapper
                 using (FileStream fs = new FileStream(editorLogPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
                 using (StreamReader reader = new StreamReader(fs))
                 {
-                    string logContents = reader.ReadToEnd();
-                    return logContents.Contains("error CS"); // Check for C# compiler errors
+                    // Read last few lines instead of the entire file
+                    List<string> recentLines = new List<string>();
+                    string line;
+                    while ((line = reader.ReadLine()) != null)
+                    {
+                        if (recentLines.Count > 20) // Keep only the last 20 lines
+                            recentLines.RemoveAt(0);
+                        recentLines.Add(line);
+                    }
+
+                    // Check only recent lines for errors
+                    return recentLines.Any(l => l.Contains("error CS"));
                 }
             }
             catch (IOException ex)
@@ -217,8 +217,7 @@ namespace Anchorpoint.Wrapper
                 return false; // Assume no errors if we can't read the file
             }
         }
-
-
+        
         private static string GetEditorLogPath()
         {
             string editorLogPath = "";
