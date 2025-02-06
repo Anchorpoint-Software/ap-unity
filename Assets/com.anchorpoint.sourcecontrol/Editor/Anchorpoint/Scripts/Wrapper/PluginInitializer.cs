@@ -1,4 +1,6 @@
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using UnityEditor;
 using Anchorpoint.Logger;
 using System.Timers;
@@ -184,17 +186,38 @@ namespace Anchorpoint.Wrapper
                 CLIWrapper.GetCurrentUser();
             }
         }
-
+        
         private static bool HasCompilationErrors()
         {
             string editorLogPath = GetEditorLogPath();
-    
             if (!File.Exists(editorLogPath)) return false;
 
-            string logContents = File.ReadAllText(editorLogPath);
-            return logContents.Contains("error CS"); // Checks for C# compiler errors
-        }
+            try
+            {
+                using (FileStream fs = new FileStream(editorLogPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                using (StreamReader reader = new StreamReader(fs))
+                {
+                    // Read last few lines instead of the entire file
+                    List<string> recentLines = new List<string>();
+                    string line;
+                    while ((line = reader.ReadLine()) != null)
+                    {
+                        if (recentLines.Count > 20) // Keep only the last 20 lines
+                            recentLines.RemoveAt(0);
+                        recentLines.Add(line);
+                    }
 
+                    // Check only recent lines for errors
+                    return recentLines.Any(l => l.Contains("error CS"));
+                }
+            }
+            catch (IOException ex)
+            {
+                AnchorpointLogger.LogError($"Failed to read Editor.log: {ex.Message}");
+                return false; // Assume no errors if we can't read the file
+            }
+        }
+        
         private static string GetEditorLogPath()
         {
             string editorLogPath = "";
