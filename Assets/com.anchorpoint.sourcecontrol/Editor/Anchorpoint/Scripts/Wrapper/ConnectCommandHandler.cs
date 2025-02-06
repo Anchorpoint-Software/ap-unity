@@ -185,72 +185,31 @@ namespace Anchorpoint.Wrapper
         //     }
         // }
         
-        // public bool IsConnected()
-        // {
-        //     if (!isRunning || connectProcess == null)
-        //     {
-        //         return false; // Process is not running or not initialized
-        //     }
-        //
-        //     try
-        //     {
-        //         if (connectProcess.HasExited)
-        //         {
-        //             connectProcess.Dispose();
-        //             connectProcess = null; // Avoid further invalid references
-        //             return false;
-        //         }
-        //
-        //         return true;
-        //     }
-        //     catch (InvalidOperationException)
-        //     {
-        //         // Process was already disposed or exited
-        //         connectProcess = null; // Ensure we clear the reference
-        //         return false;
-        //     }
-        // }
-        
-        
         public bool IsConnected()
         {
-            // If the connection is not running or the process is null, return false early
             if (!isRunning || connectProcess == null)
             {
-                return false;
+                return false; // Process is not running or not initialized
             }
 
             try
             {
-                lock (this) // Ensure only one thread accesses the process at a time
+                if (connectProcess.HasExited)
                 {
-                    if (connectProcess == null)
-                    {
-                        return false; // Process was disposed by another thread
-                    }
-
-                    if (connectProcess.HasExited)
-                    {
-                        connectProcess.Dispose();
-                        connectProcess = null; // Prevent further invalid references
-                        isRunning = false; // Mark the connection as stopped
-                        return false;
-                    }
-
-                    return true;
+                    connectProcess.Dispose();
+                    connectProcess = null; // Avoid further invalid references
+                    return false;
                 }
+
+                return true;
             }
             catch (InvalidOperationException)
             {
-                lock (this) // Ensure no further access to a disposed process
-                {
-                    connectProcess = null;
-                    isRunning = false;
-                }
+                // Process was already disposed or exited
+                connectProcess = null; // Ensure we clear the reference
                 return false;
             }
         }
-
 
     }
 }
