@@ -30,7 +30,7 @@ namespace Anchorpoint.Wrapper
             if (isRunning)
                 return;
 
-            isRunning = true;
+            // isRunning = true;
             connectThread = new Thread(RunConnectProcess) { IsBackground = true };
             connectThread.Start();
 
@@ -112,7 +112,7 @@ namespace Anchorpoint.Wrapper
         {
             if (string.IsNullOrWhiteSpace(data))
                 return;
-
+            isRunning = true;
             jsonBuffer.AppendLine(data);
             foreach (char c in data)
             {
