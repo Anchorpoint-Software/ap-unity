@@ -29,6 +29,7 @@ public static class AnchorpointChecker
     private static bool IsAnchorpointInstalledWindows()
     {
         string cliPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), anchorpointExecutablePath);
+        AnchorpointLogger.LogError($"This is the checker {cliPath}");
         return File.Exists(cliPath);
     }
 
