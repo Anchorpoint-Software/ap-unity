@@ -197,7 +197,7 @@ namespace Anchorpoint.Constants
                     // Ensure the directory exists before proceeding
                     if (!Directory.Exists(basePath))
                     {
-                        AnchorpointLogger.LogError($"Anchorpoint directory not found: {basePath}");
+                        AnchorpointLogger.LogWarning($"Anchorpoint directory not found: {basePath}");
                         return null;
                     }
 
@@ -211,7 +211,7 @@ namespace Anchorpoint.Constants
 
                     if (!versionedDirectories.Any())
                     {
-                        AnchorpointLogger.LogError("No Anchorpoint versions found in: " + basePath);
+                        AnchorpointLogger.LogWarning("No Anchorpoint versions found in: " + basePath);
                         return null;
                     }
 
@@ -221,7 +221,7 @@ namespace Anchorpoint.Constants
 
                     if (!File.Exists(exePath))
                     {
-                        AnchorpointLogger.LogError($"Anchorpoint.exe not found at expected path: {exePath}");
+                        AnchorpointLogger.LogWarning($"Anchorpoint.exe not found at expected path: {exePath}");
                         return null;
                     }
 
