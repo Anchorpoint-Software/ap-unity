@@ -11,12 +11,8 @@ public static class AnchorpointChecker
 
     public static bool IsAnchorpointInstalled()
     {
-        
-        AnchorpointLogger.LogError(anchorpointExecutablePath);
-        
         if (Application.platform == RuntimePlatform.WindowsEditor)
         {
-            AnchorpointLogger.LogError($"This is the checker asdfasdf");
             return IsAnchorpointInstalledWindows();
         }
         else if (Application.platform == RuntimePlatform.OSXEditor)
@@ -30,7 +26,6 @@ public static class AnchorpointChecker
     private static bool IsAnchorpointInstalledWindows()
     {
         string cliPath = anchorpointExecutablePath;
-        AnchorpointLogger.LogError($"This is the checker {cliPath}");
         return File.Exists(cliPath);
     }
 
