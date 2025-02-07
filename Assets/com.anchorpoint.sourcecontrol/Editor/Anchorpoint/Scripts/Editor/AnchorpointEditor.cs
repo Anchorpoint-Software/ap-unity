@@ -1083,7 +1083,8 @@ namespace Anchorpoint.Editor
             
             refreshButton.clickable.clicked += Refresh;
             disconnectButton.clickable.clicked += Disconnect;
-            helpConnectedWinButton.clickable.clicked += Help;
+            // helpConnectedWinButton.clickable.clicked += Help;
+            helpConnectedWinButton.clickable.clicked += AnchorpointChecker.OpenAnchorpointApplication;
             
             CreateTreeUnity(treeView);
         }
