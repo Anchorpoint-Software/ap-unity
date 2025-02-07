@@ -167,7 +167,8 @@ namespace Anchorpoint.Wrapper
         
         public bool IsConnected()
         {
-            return isRunning && connectProcess != null && !connectProcess.HasExited;
+            // return isRunning && connectProcess != null && !connectProcess.HasExited;
+            return isRunning;
         }
     }
 }
