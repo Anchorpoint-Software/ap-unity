@@ -11,6 +11,9 @@ public static class AnchorpointChecker
 
     public static bool IsAnchorpointInstalled()
     {
+        
+        AnchorpointLogger.LogError(anchorpointExecutablePath);
+        
         if (Application.platform == RuntimePlatform.WindowsEditor)
         {
             return IsAnchorpointInstalledWindows();
