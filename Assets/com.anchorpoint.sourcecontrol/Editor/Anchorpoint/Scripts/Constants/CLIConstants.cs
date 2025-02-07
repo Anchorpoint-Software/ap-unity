@@ -221,7 +221,7 @@ namespace Anchorpoint.Constants
 
                     if (!File.Exists(exePath))
                     {
-                        Debug.LogError($"Anchorpoint.exe not found at expected path: {exePath}");
+                        AnchorpointLogger.LogError($"Anchorpoint.exe not found at expected path: {exePath}");
                         return null;
                     }
 
