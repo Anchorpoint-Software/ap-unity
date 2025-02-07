@@ -16,6 +16,7 @@ public static class AnchorpointChecker
         
         if (Application.platform == RuntimePlatform.WindowsEditor)
         {
+            AnchorpointLogger.LogError($"This is the checker asdfasdf");
             return IsAnchorpointInstalledWindows();
         }
         else if (Application.platform == RuntimePlatform.OSXEditor)
