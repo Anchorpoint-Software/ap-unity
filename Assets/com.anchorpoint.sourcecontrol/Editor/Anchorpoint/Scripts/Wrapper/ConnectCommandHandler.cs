@@ -145,6 +145,9 @@ namespace Anchorpoint.Wrapper
 
         private void OnEditorUpdate()
         {
+            if (!isRunning)
+                return;
+
             // Execute queued actions
             lock (queueLock)
             {
