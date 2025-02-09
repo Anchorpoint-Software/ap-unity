@@ -70,6 +70,7 @@ namespace Anchorpoint.Editor
         
         private bool inProcess = false;      // Flag to check is if some commit/revert is in process
         private bool hasConflict = false;      // Flag to check is if some conflict
+        private bool hasMetaFile = false;       // Flag to check if there is meta file in changed files
         
         private void OnEnable()
         {
@@ -814,6 +815,8 @@ namespace Anchorpoint.Editor
         private int CalculateTotalChanges()
         {
             processedFiles.Clear();
+            hasMetaFile = false;
+            
             CLIStatus status = DataManager.GetStatus();
             int totalChanges = 0;
 
@@ -876,6 +879,8 @@ namespace Anchorpoint.Editor
 
                 if (filePath.EndsWith(".meta"))
                 {
+                    hasMetaFile = true;     // The changed files contain meta file
+                    
                     // It's a .meta file
                     string baseFilePath = fullPath.Substring(0, fullPath.Length - 5); // remove ".meta"
 
@@ -1025,7 +1030,7 @@ namespace Anchorpoint.Editor
             treeView = root.Q<TreeView>("TreeView");
             
             int totalChanges = CalculateTotalChanges();
-            changesLabel.text = totalChanges == 0 ? " No changed files" : $"{totalChanges} changed files";
+            changesLabel.text = totalChanges == 0 ? " No changed files" : (hasMetaFile ? $"{totalChanges} changed files (without meta files)" : $"{totalChanges} changed files");
             emptyTreeDescriptionLabel.style.display = totalChanges == 0 ? DisplayStyle.Flex : DisplayStyle.None;
             treeView.style.display = totalChanges == 0 ? DisplayStyle.None : DisplayStyle.Flex;
             
