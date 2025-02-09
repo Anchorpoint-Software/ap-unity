@@ -196,10 +196,10 @@ namespace Anchorpoint.Editor
                         SetAllCheckboxesRecursive(itemData.Children, evt.newValue);
                     }
 
-                    commitButton.SetEnabled(IsAnyFileSelected()); // Update the commit button state
-                    revertButton.SetEnabled(IsAnyFileSelected()); // Update the revert button state
-                    commitMessageField.SetEnabled(IsAnyFileSelected());
-
+                    var isAnyFileSelected = IsAnyFileSelected();
+                    commitButton.SetEnabled(isAnyFileSelected); // Update the commit button state
+                    revertButton.SetEnabled(isAnyFileSelected); // Update the revert button state
+                    commitMessageField.SetEnabled(isAnyFileSelected);
                     // Refresh all visible items in the tree view
                     treeView.RefreshItems();
                 });
