@@ -10,11 +10,6 @@ using Anchorpoint.Wrapper;
 
 namespace Anchorpoint.Editor
 {
-    public static class IconCache
-    {
-        public static Dictionary<string, Texture2D> Icons = new Dictionary<string, Texture2D>();
-        public static List<Texture2D> PersistentReferences = new List<Texture2D>();
-    }
 
     [InitializeOnLoad]
     public class AssetStatusIconDrawer
@@ -102,11 +97,7 @@ namespace Anchorpoint.Editor
                 status = notStagedStatus;
             }
 
-            if (outdatedFiles != null && outdatedFiles.Contains(commitPath))
-            {
-                CacheIcon(commitPath, LoadIcon(outdatedIcon));
-            }
-            else if (lockedFiles != null && lockedFiles.TryGetValue(commitPath, out var lockingUserEmail))
+            if (lockedFiles != null && lockedFiles.TryGetValue(commitPath, out var lockingUserEmail))
             {
                 string currentUserEmail = DataManager.GetCurrentUser()?.Email;
                 if (!string.IsNullOrEmpty(currentUserEmail))
@@ -140,6 +131,14 @@ namespace Anchorpoint.Editor
                         });
                     }
                 }
+            } 
+            else if (status == "C")
+            {
+                CacheIcon(commitPath, LoadIcon(conflictIcon));
+            }
+            else if (outdatedFiles != null && outdatedFiles.Contains(commitPath))
+            {
+                CacheIcon(commitPath, LoadIcon(outdatedIcon));
             }
             else if (status == "A")
             {
@@ -148,10 +147,6 @@ namespace Anchorpoint.Editor
             else if (status == "M")
             {
                 CacheIcon(commitPath, LoadIcon(modifyIcon));
-            }
-            else if (status == "C")
-            {
-                CacheIcon(commitPath, LoadIcon(conflictIcon));
             }
         }
 

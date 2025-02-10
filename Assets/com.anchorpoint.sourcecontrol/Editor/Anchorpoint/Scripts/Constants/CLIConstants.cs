@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using UnityEditor;
 using System.Text.RegularExpressions;
+using Anchorpoint.Logger;
 using UnityEngine;
 
 namespace Anchorpoint.Constants
@@ -192,6 +193,14 @@ namespace Anchorpoint.Constants
                 case RuntimePlatform.WindowsEditor:
                 {
                     string basePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Anchorpoint");
+
+                    // Ensure the directory exists before proceeding
+                    if (!Directory.Exists(basePath))
+                    {
+                        AnchorpointLogger.LogWarning($"Anchorpoint directory not found: {basePath}");
+                        return null;
+                    }
+
                     string pattern = @"app-(\d+\.\d+\.\d+)";
                     string executableName = "Anchorpoint.exe";
 
@@ -200,18 +209,23 @@ namespace Anchorpoint.Constants
                         .OrderByDescending(d => Version.Parse(Regex.Match(d, pattern).Groups[1].Value))
                         .ToList();
 
-                    if (versionedDirectories.Any())
+                    if (!versionedDirectories.Any())
                     {
-                        string latestVersionPath = versionedDirectories.First();
-                        string latestVersion = Regex.Match(latestVersionPath, pattern).Groups[1].Value;
-                        string exePath = Path.Combine(latestVersionPath, executableName);
-
-                        if (File.Exists(exePath))
-                        {
-                            return exePath;
-                        }
+                        AnchorpointLogger.LogWarning("No Anchorpoint versions found in: " + basePath);
+                        return null;
                     }
-                    break;
+
+                    string latestVersionPath = versionedDirectories.First();
+                    string latestVersion = Regex.Match(latestVersionPath, pattern).Groups[1].Value;
+                    string exePath = Path.Combine(latestVersionPath, executableName);
+
+                    if (!File.Exists(exePath))
+                    {
+                        AnchorpointLogger.LogWarning($"Anchorpoint.exe not found at expected path: {exePath}");
+                        return null;
+                    }
+
+                    return exePath;
                 }
                 case RuntimePlatform.OSXEditor:
                     return "/Applications/Anchorpoint.app";

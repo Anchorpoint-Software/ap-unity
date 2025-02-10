@@ -271,8 +271,7 @@ namespace Anchorpoint.Wrapper
                 {
                     if (command == Command.Status)
                     {
-                        AnchorpointLogger.Log("Refresh called");
-                        AnchorpointEvents.RaiseRefreshWindow();
+                        AnchorpointEvents.RaiseRefreshTreeWindow();
                     }
                 };
             });

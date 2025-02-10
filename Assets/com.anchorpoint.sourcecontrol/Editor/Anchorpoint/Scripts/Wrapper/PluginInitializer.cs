@@ -1,4 +1,6 @@
-using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using UnityEditor;
 using Anchorpoint.Logger;
 using System.Timers;
@@ -20,8 +22,6 @@ namespace Anchorpoint.Wrapper
         private const string WasConnectedKey = "Anchorpoint_WasConnected";
         
         private static double lastConnectionCheckTime = 0;
-        private const double connectionCheckInterval = 30.0; // Check every 10 seconds
-        public static event Action RefreshView;
 
         public static bool WasConnected
         {
@@ -31,16 +31,26 @@ namespace Anchorpoint.Wrapper
 
         static PluginInitializer()
         {
+            if (!AnchorpointChecker.IsAnchorpointInstalled())
+            {
+                return;
+            }
+
             EditorApplication.delayCall += Initialize;
             AssemblyReloadEvents.beforeAssemblyReload += OnBeforeAssemblyReload;
             AssemblyReloadEvents.afterAssemblyReload += AfterAssemblyReload;
             EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
-            EditorApplication.update += PeriodicConnectionCheck;
-            
         }
 
         private static void Initialize()
         {
+            if (HasCompilationErrors())
+            {
+                StopConnection();
+                AnchorpointLogger.LogError("Compilation errors detected. Disabling Anchorpoint.");
+                return;
+            }
+            
             if (connectHandler == null)
             {
                 connectHandler = new ConnectCommandHandler();
@@ -127,6 +137,7 @@ namespace Anchorpoint.Wrapper
                 case "files outdated":
                     break;
                 case "files updated":
+                    CLIWrapper.Status();    //  There is a conflict so run the Status command
                     break;
                 case "project opened":
                     IsProjectOpen = true;
@@ -149,9 +160,7 @@ namespace Anchorpoint.Wrapper
                     break;
             }
 
-            RefreshView?.Invoke();
-            
-            AnchorpointLogger.Log("Refresh View Called");
+            AnchorpointEvents.RaiseRefreshView();
         }
 
         private static void StartStatusPolling()
@@ -177,24 +186,50 @@ namespace Anchorpoint.Wrapper
                 CLIWrapper.GetCurrentUser();
             }
         }
-
-        private static void PeriodicConnectionCheck()
+        
+        private static bool HasCompilationErrors()
         {
-            // Get the current time in seconds
-            double currentTime = EditorApplication.timeSinceStartup;
+            string editorLogPath = GetEditorLogPath();
+            if (!File.Exists(editorLogPath)) return false;
 
-            // Check if the interval has passed
-            if (currentTime - lastConnectionCheckTime >= connectionCheckInterval)
+            try
             {
-                lastConnectionCheckTime = currentTime;
-
-                // Perform the connection check
-                if (!IsPlaymode && WasConnected && !IsConnected)
+                using (FileStream fs = new FileStream(editorLogPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                using (StreamReader reader = new StreamReader(fs))
                 {
-                    AnchorpointLogger.Log("Detected disconnection. Attempting to reconnect...");
-                    StartConnection();
+                    // Read last few lines instead of the entire file
+                    List<string> recentLines = new List<string>();
+                    string line;
+                    while ((line = reader.ReadLine()) != null)
+                    {
+                        if (recentLines.Count > 20) // Keep only the last 20 lines
+                            recentLines.RemoveAt(0);
+                        recentLines.Add(line);
+                    }
+
+                    // Check only recent lines for errors
+                    return recentLines.Any(l => l.Contains("error CS"));
                 }
             }
+            catch (IOException ex)
+            {
+                AnchorpointLogger.LogError($"Failed to read Editor.log: {ex.Message}");
+                return false; // Assume no errors if we can't read the file
+            }
+        }
+        
+        private static string GetEditorLogPath()
+        {
+            string editorLogPath = "";
+
+#if UNITY_EDITOR_WIN
+    editorLogPath = Path.Combine(System.Environment.GetFolderPath(System.Environment.SpecialFolder.LocalApplicationData), "Unity", "Editor", "Editor.log");
+
+#elif UNITY_EDITOR_OSX
+            editorLogPath = Path.Combine(System.Environment.GetFolderPath(System.Environment.SpecialFolder.UserProfile), "Library", "Logs", "Unity", "Editor.log");
+#endif
+
+            return editorLogPath;
         }
     }
 }

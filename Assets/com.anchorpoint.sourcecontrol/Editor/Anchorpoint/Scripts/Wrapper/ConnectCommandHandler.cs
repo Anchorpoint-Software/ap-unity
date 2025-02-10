@@ -29,8 +29,7 @@ namespace Anchorpoint.Wrapper
         {
             if (isRunning)
                 return;
-
-            isRunning = true;
+            
             connectThread = new Thread(RunConnectProcess) { IsBackground = true };
             connectThread.Start();
 
@@ -112,7 +111,8 @@ namespace Anchorpoint.Wrapper
         {
             if (string.IsNullOrWhiteSpace(data))
                 return;
-
+            
+            isRunning = true;
             jsonBuffer.AppendLine(data);
             foreach (char c in data)
             {
@@ -145,6 +145,9 @@ namespace Anchorpoint.Wrapper
 
         private void OnEditorUpdate()
         {
+            if (!isRunning)
+                return;
+
             // Execute queued actions
             lock (queueLock)
             {
@@ -167,7 +170,12 @@ namespace Anchorpoint.Wrapper
         
         public bool IsConnected()
         {
-            return isRunning && connectProcess != null && !connectProcess.HasExited;
+            if (isRunning)
+            {
+                return (bool)!connectProcess?.HasExited;
+            }
+
+            return isRunning;
         }
     }
 }
