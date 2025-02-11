@@ -20,8 +20,6 @@ namespace Anchorpoint.Wrapper
         public static bool IsProjectOpen { get; private set; }
         public static bool IsPlaymode { get; private set; }
         private const string WasConnectedKey = "Anchorpoint_WasConnected";
-        
-        private static double lastConnectionCheckTime = 0;
 
         public static bool WasConnected
         {

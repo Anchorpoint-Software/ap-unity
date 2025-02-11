@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using Anchorpoint.Constants;
 using Anchorpoint.Events;
 using Anchorpoint.Logger;
@@ -912,16 +913,21 @@ namespace Anchorpoint.Editor
             EditorApplication.delayCall += () =>
             {
                 btnStr = output;
-
-                if (commitButton != null && btnStr == "Pushing git changes")
+                
+                if(inProcess)
                 {
-                    commitButton.text = "Commit Changed Files";
+                    string displayMessage = output.Split('.')[0];
+                    commitButton.text = $"{displayMessage}...";
                 }
                 
-                if (btnStr == "Status Command Completed")
+                // if (btnStr == "Status Command Completed")
+                if (btnStr == "Pushing git changes")
                 {
+                    commitButton.text = "Commit Changed Files";
                     inProcess = false;
                     ChangingUIInProgress(true);
+                    commitButton.SetEnabled(false);
+                    revertButton.SetEnabled(false);
                     OnRevertComplete();
                 }
             };
