@@ -42,6 +42,7 @@ namespace Anchorpoint.Editor
         private Button helpConnectedWinButton;
         private VisualElement loadingImg;
         private VisualElement refreshImg;
+        private Label processingTextLabel;
         
         //  Connect to Anchorpoint window
         private Label descriptionConnectWin;
@@ -917,7 +918,7 @@ namespace Anchorpoint.Editor
                 if(inProcess)
                 {
                     string displayMessage = output.Split('.')[0];
-                    commitButton.text = $"{displayMessage}...";
+                    processingTextLabel.text = $"{displayMessage}...";
                 }
                 
                 // if (btnStr == "Status Command Completed")
@@ -1019,6 +1020,8 @@ namespace Anchorpoint.Editor
             commitButton.SetEnabled(false); // Disable the commit button initially
             revertButton = root.Q<Button>("Revert");
             revertButton.SetEnabled(false);
+            processingTextLabel = root.Q<Label>("ProcessingTextLabel"); 
+            processingTextLabel.style.display = DisplayStyle.None;
 
             refreshButton = root.Q<Button>("Refresh");
             loadingImg = root.Q<VisualElement>("LoadingImg");
@@ -1181,6 +1184,7 @@ namespace Anchorpoint.Editor
             commitMessageField.SetEnabled(flag);
             commitButton.SetEnabled(flag);
             revertButton.SetEnabled(flag);
+            processingTextLabel.style.display = flag ? DisplayStyle.None : DisplayStyle.Flex;
         }
         
         private void HasConflictedFiles()
@@ -1224,6 +1228,7 @@ namespace Anchorpoint.Editor
                 revertButton.style.display = DisplayStyle.None;
                 noticeLable.style.display = DisplayStyle.None;
                 conflictLable.style.display = DisplayStyle.Flex;
+                processingTextLabel.style.display = DisplayStyle.None;
             }
             else
             {
