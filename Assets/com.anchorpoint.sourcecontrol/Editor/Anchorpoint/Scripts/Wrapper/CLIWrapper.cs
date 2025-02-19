@@ -117,11 +117,10 @@ namespace Anchorpoint.Wrapper
                 Output = string.Empty;
                 AnchorpointLogger.LogWarning("Commit Message empty!");
                 AddOutput($"\n\n<color=red>Commit Message empty!</color>");
+                message = "Commit Message empty!";
             }
-            else
-            {
-                EnqueueCommand(Command.Sync, CLIConstants.SyncFiles(message, files), true);
-            }
+            
+            EnqueueCommand(Command.Sync, CLIConstants.SyncFiles(message, files), true);
         }
         
         public static void Revert(params string[] files)

@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -11,6 +12,7 @@ using Anchorpoint.Wrapper;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
+using Unity.EditorCoroutines.Editor;
 
 namespace Anchorpoint.Editor
 {
@@ -40,6 +42,7 @@ namespace Anchorpoint.Editor
         private Button refreshButton;
         private Button disconnectButton;
         private Button helpConnectedWinButton;
+        private Button spinnerImg;
         private VisualElement loadingImg;
         private VisualElement refreshImg;
         private Label processingTextLabel;
@@ -60,7 +63,6 @@ namespace Anchorpoint.Editor
         
         // Global paths
         private string projectPath;      // Absolute path to the Unity project root
-        private string btnStr;
         private const string assetsFolderName = "Assets";
         private const string anchorPointIcon = "d8e0264a1e3a54b09aaf9e7ac62d4e1f";
         private const string helpUrl = "https://docs.anchorpoint.app/docs/version-control/first-steps/unity/";
@@ -73,6 +75,12 @@ namespace Anchorpoint.Editor
         private bool inProcess = false;      // Flag to check is if some commit/revert is in process
         private bool hasConflict = false;      // Flag to check is if some conflict
         private bool hasMetaFile = false;       // Flag to check if there is meta file in changed files
+        
+        // Spinner wheel animation things
+        private List<Texture2D> gifFrames = new List<Texture2D>();
+        private int currentFrame = 0;
+        private float frameRate = 0.1f; // 0.1 sec per frame
+        private double lastFrameTime;
         
         private void OnEnable()
         {
@@ -913,27 +921,43 @@ namespace Anchorpoint.Editor
             // Update the UI on the main thread
             EditorApplication.delayCall += () =>
             {
-                btnStr = output;
-                
-                if(inProcess)
+                if (inProcess)
                 {
-                    string displayMessage = output.Split('.')[0];
-                    processingTextLabel.text = $"{displayMessage}...";
-                }
-                
-                // if (btnStr == "Status Command Completed")
-                if (btnStr == "Pushing git changes")
-                {
-                    commitButton.text = "Commit Changed Files";
-                    inProcess = false;
-                    ChangingUIInProgress(true);
-                    commitButton.SetEnabled(false);
-                    revertButton.SetEnabled(false);
-                    OnRevertComplete();
+                    string displayMessage = output.Split('.')[0]; // Remove everything after the first dot
+                    
+                    // Check if progress is included in the output
+                    Match match = Regex.Match(output, @"(\d+)");
+                    if (match.Success)
+                    {
+                        string progressValue = match.Groups[1].Value;
+                        processingTextLabel.text = $"Staging files: {progressValue}%...";
+                    }
+                    else
+                    {
+                        processingTextLabel.text = $"{displayMessage}...";
+                    }
+
+                    if (displayMessage.Equals("Pushing git changes", StringComparison.OrdinalIgnoreCase) ||
+                        displayMessage.Equals("Status Command Completed", StringComparison.OrdinalIgnoreCase))
+                    {
+                        SettingStateToNormal();
+                        EditorCoroutineUtility.StartCoroutineOwnerless(DelayedExecution(5f));
+                    }
                 }
             };
         }
-        
+
+        private void SettingStateToNormal()
+        {
+            inProcess = false;
+            AnchorpointEvents.inProgress = false;
+            ChangingUIInProgress(true);
+            commitButton.SetEnabled(false);
+            revertButton.SetEnabled(false);
+            OnRevertComplete();
+            StopSpinnerAnimation();
+        }
+
         private void OnRevertComplete()
         {
             if (revertButton != null)
@@ -1020,6 +1044,8 @@ namespace Anchorpoint.Editor
             commitButton.SetEnabled(false); // Disable the commit button initially
             revertButton = root.Q<Button>("Revert");
             revertButton.SetEnabled(false);
+            spinnerImg = root.Q<Button>("Spinner");
+            spinnerImg.style.display = DisplayStyle.None;
             processingTextLabel = root.Q<Label>("ProcessingTextLabel"); 
             processingTextLabel.style.display = DisplayStyle.None;
 
@@ -1058,8 +1084,11 @@ namespace Anchorpoint.Editor
                 if (IsAnyFileSelected())
                 {
                     inProcess = true;
+                    AnchorpointEvents.inProgress = true;
                     ChangingUIInProgress(false);
-                    commitButton.text = "Processing changes…";
+                    processingTextLabel.style.display = DisplayStyle.Flex;
+                    processingTextLabel.text = "Processing changes…";
+                    StartSpinnerAnimation();
                     CLIWrapper.Sync(commitMessage, filesToCommit.ToArray());
                 }
                 else
@@ -1075,6 +1104,7 @@ namespace Anchorpoint.Editor
                 if (IsAnyFileSelected())
                 {
                     inProcess = true;
+                    AnchorpointEvents.inProgress = true;
                     ChangingUIInProgress(false);
                     revertButton.text = "Reverting...";
                     CLIWrapper.Revert(filesToRevert.ToArray());
@@ -1184,7 +1214,13 @@ namespace Anchorpoint.Editor
             commitMessageField.SetEnabled(flag);
             commitButton.SetEnabled(flag);
             revertButton.SetEnabled(flag);
-            processingTextLabel.style.display = flag ? DisplayStyle.None : DisplayStyle.Flex;
+        }
+        
+        IEnumerator DelayedExecution(float delayInSeconds)
+        {
+            processingTextLabel.text = "Commit successful";
+            yield return new EditorWaitForSeconds(delayInSeconds); 
+            processingTextLabel.style.display = DisplayStyle.None;
         }
         
         private void HasConflictedFiles()
@@ -1228,12 +1264,64 @@ namespace Anchorpoint.Editor
                 revertButton.style.display = DisplayStyle.None;
                 noticeLable.style.display = DisplayStyle.None;
                 conflictLable.style.display = DisplayStyle.Flex;
-                processingTextLabel.style.display = DisplayStyle.None;
+                spinnerImg.style.display = DisplayStyle.None;
             }
             else
             {
                 hasConflict = false;
             }
+        }
+        
+        private void StartSpinnerAnimation()
+        {
+            if (spinnerImg == null)
+            {
+                AnchorpointLogger.LogError("Spinner image not found!");
+                return;
+            }
+            
+            spinnerImg.style.display = DisplayStyle.Flex;
+            
+            if (gifFrames.Count == 0)
+            {
+                // Load frames from folder
+                LoadGifFrames("Packages/com.anchorpoint.sourcecontrol/Editor/Anchorpoint/UI/Spinner");
+            }
+            
+            // Start animation loop
+            EditorApplication.update += UpdateGifAnimation;
+        }
+
+        private void LoadGifFrames(string folderPath)
+        {
+            if (!Directory.Exists(folderPath))
+            {
+                AnchorpointLogger.LogError($"Folder not found: {folderPath}");
+                return;
+            }
+
+            string[] framePaths = Directory.GetFiles(folderPath, "*.png");
+            gifFrames = framePaths.Select(AssetDatabase.LoadAssetAtPath<Texture2D>).ToList();
+        }
+
+        private void UpdateGifAnimation()
+        {
+            if (gifFrames == null || gifFrames.Count == 0) return;
+
+            if (EditorApplication.timeSinceStartup - lastFrameTime > frameRate)
+            {
+                lastFrameTime = EditorApplication.timeSinceStartup;
+                currentFrame = (currentFrame + 1) % gifFrames.Count;
+
+                // Apply the current frame as the spinner's background
+                spinnerImg.style.backgroundImage = new StyleBackground(gifFrames[currentFrame]);
+            }
+        }
+
+        private void StopSpinnerAnimation()
+        {
+            spinnerImg.style.display = DisplayStyle.None;
+            EditorApplication.update -= UpdateGifAnimation;
         }
     }
 }
