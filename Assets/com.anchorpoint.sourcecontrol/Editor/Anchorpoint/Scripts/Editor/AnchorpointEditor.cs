@@ -1065,7 +1065,9 @@ namespace Anchorpoint.Editor
             treeView = root.Q<TreeView>("TreeView");
             
             int totalChanges = CalculateTotalChanges();
-            changesLabel.text = totalChanges == 0 ? " No changed files" : (hasMetaFile ? $"{totalChanges} changed files (without meta files)" : $"{totalChanges} changed files");
+            changesLabel.text = totalChanges == 0 ? " No changed files" : 
+                                totalChanges == 1 ? (hasMetaFile ? "One changed file (without meta files)" : "One changed file") : 
+                                (hasMetaFile ? $"{totalChanges} changed files (without meta files)" : $"{totalChanges} changed files");
             emptyTreeDescriptionLabel.style.display = totalChanges == 0 ? DisplayStyle.Flex : DisplayStyle.None;
             treeView.style.display = totalChanges == 0 ? DisplayStyle.None : DisplayStyle.Flex;
             
