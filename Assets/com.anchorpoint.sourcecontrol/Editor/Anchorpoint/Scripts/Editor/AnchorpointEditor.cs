@@ -938,6 +938,12 @@ namespace Anchorpoint.Editor
                     {
                         processingTextLabel.text = $"{displayMessage}...";
                     }
+                    
+                    if (displayMessage.Equals("Revert Command Completed", StringComparison.OrdinalIgnoreCase))
+                    {
+                        processingTextLabel.text = "Reverting completed";
+                        SettingStateToNormal();
+                    }
 
                     if (displayMessage.Equals("Pushing git changes", StringComparison.OrdinalIgnoreCase) ||
                         displayMessage.Equals("Status Command Completed", StringComparison.OrdinalIgnoreCase))
@@ -1134,7 +1140,9 @@ namespace Anchorpoint.Editor
                     inProcess = true;
                     AnchorpointEvents.inProgress = true;
                     ChangingUIInProgress(false);
-                    revertButton.text = "Reverting...";
+                    processingTextLabel.style.display = DisplayStyle.Flex;
+                    processingTextLabel.text = "Reverting…";
+                    StartSpinnerAnimation();
                     CLIWrapper.Revert(filesToRevert.ToArray());
                 }
                 else
