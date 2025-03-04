@@ -822,14 +822,15 @@ namespace Anchorpoint.Editor
             }
         }
 
-        private int CalculateTotalChanges()
+        private (int totalMetaFiles, int totalNonMetaFiles) CalculateTotalChanges()
         {
             processedFiles.Clear();
             hasMetaFile = false;
             
             CLIStatus status = DataManager.GetStatus();
-            int totalChanges = 0;
-
+            int totalMetaFiles = 0;
+            int totalNonMetaFiles = 0;
+            
             // Ensure projectPath is initialized
             if (string.IsNullOrEmpty(projectPath))
             {
@@ -838,7 +839,7 @@ namespace Anchorpoint.Editor
 
             if (status == null)
             {
-                return 0;
+                return (0,0);
             }
 
             // Merge staged & not staged into a single dictionary
@@ -902,18 +903,18 @@ namespace Anchorpoint.Editor
                     if (!processedFiles.Contains(baseFilePath))
                     {
                         processedFiles.Add(baseFilePath);
-                        totalChanges++;
+                        totalMetaFiles++;
                     }
                 }
                 else
                 {
                     // It's a regular file
                     processedFiles.Add(fullPath);
-                    totalChanges++;
+                    totalNonMetaFiles++;
                 }
             }
 
-            return totalChanges;
+            return (totalMetaFiles, totalNonMetaFiles);
         }
         
         private void OnCommandOutputReceived(string output)
@@ -1064,10 +1065,30 @@ namespace Anchorpoint.Editor
             emptyTreeDescriptionLabel = root.Q<Label>("EmptyTreeDescription");
             treeView = root.Q<TreeView>("TreeView");
             
-            int totalChanges = CalculateTotalChanges();
-            changesLabel.text = totalChanges == 0 ? " No changed files" : 
-                                totalChanges == 1 ? (hasMetaFile ? "One changed file (without meta files)" : "One changed file") : 
-                                (hasMetaFile ? $"{totalChanges} changed files (without meta files)" : $"{totalChanges} changed files");
+            (int totalMetaFiles, int totalNonMetaFiles) = CalculateTotalChanges();
+            int totalChanges = totalMetaFiles + totalNonMetaFiles;
+          
+            if (totalChanges == 0)
+            {
+                changesLabel.text = " No changed files";
+            }
+            else if (totalNonMetaFiles == 1 && hasMetaFile)
+            {
+                changesLabel.text = "One changed file (without meta files)";
+            }
+            else if(totalMetaFiles > 0 && totalNonMetaFiles == 0)
+            {
+                changesLabel.text = $"{totalMetaFiles} metafiles modified";
+            }
+            else if(hasMetaFile)
+            {
+                changesLabel.text = $"{totalChanges} changed files (without meta files)";
+            }
+            else
+            {
+                changesLabel.text =  $"{totalChanges} changed files";
+            }
+
             emptyTreeDescriptionLabel.style.display = totalChanges == 0 ? DisplayStyle.Flex : DisplayStyle.None;
             treeView.style.display = totalChanges == 0 ? DisplayStyle.None : DisplayStyle.Flex;
             
