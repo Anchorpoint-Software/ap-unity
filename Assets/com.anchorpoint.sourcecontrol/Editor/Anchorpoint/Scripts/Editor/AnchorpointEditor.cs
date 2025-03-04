@@ -32,6 +32,7 @@ namespace Anchorpoint.Editor
         private TextField commitMessageField;
         private Label changesLabel;
         private Label emptyTreeDescriptionLabel;
+        private Label onlyMetafilesDescriptionLabel;
         private Label noticeLable;
         private Label conflictLable;
         private Button connectedOpenAnchorpointButton;
@@ -1065,6 +1066,9 @@ namespace Anchorpoint.Editor
             emptyTreeDescriptionLabel = root.Q<Label>("EmptyTreeDescription");
             treeView = root.Q<TreeView>("TreeView");
             
+            onlyMetafilesDescriptionLabel = root.Q<Label>("OnlyMetafilesDescription");
+            onlyMetafilesDescriptionLabel.style.display = DisplayStyle.None;
+            
             (int totalMetaFiles, int totalNonMetaFiles) = CalculateTotalChanges();
             int totalChanges = totalMetaFiles + totalNonMetaFiles;
           
@@ -1076,9 +1080,10 @@ namespace Anchorpoint.Editor
             {
                 changesLabel.text = "One changed file (without meta files)";
             }
-            else if(totalMetaFiles > 0 && totalNonMetaFiles == 0)
+            else if(totalMetaFiles > 0 && totalNonMetaFiles == 0)       // Condition where there are only metafiles
             {
                 changesLabel.text = $"{totalMetaFiles} metafiles modified";
+                onlyMetafilesDescriptionLabel.style.display = DisplayStyle.Flex;
             }
             else if(hasMetaFile)
             {
