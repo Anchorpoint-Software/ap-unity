@@ -929,6 +929,24 @@ namespace Anchorpoint.Editor
             // Update the UI on the main thread
             EditorApplication.delayCall += () =>
             {
+                if (output.Contains("\"error\":"))
+                {
+                    // Parse the error message using Regex or a JSON parser
+                    string errorMessage = Regex.Match(output, "\"error\"\\s*:\\s*\"([^\"]+)\"").Groups[1].Value;
+
+                    // Log the error to the console
+                    // This is the only error message that will bypass the Anchorpoint Logger class
+                    Debug.LogError($"Error: {errorMessage}");
+
+                    // Set the progress text to show the error
+                    processingTextLabel.text = "An issue has occurred. Check the console.";
+                    processingTextLabel.style.color = Color.red;
+                    processingTextLabel.style.display = DisplayStyle.Flex;
+
+                    // Hide the message after 5 seconds
+                    EditorCoroutineUtility.StartCoroutineOwnerless(DelayedExecution(5f));
+                }
+                
                 if (inProcess)
                 {
                     string displayMessage = output.Split('.')[0]; // Remove everything after the first dot
@@ -1273,6 +1291,7 @@ namespace Anchorpoint.Editor
         {
             processingTextLabel.text = "Commit successful";
             yield return new EditorWaitForSeconds(delayInSeconds); 
+            processingTextLabel.style.color = Color.white;
             processingTextLabel.style.display = DisplayStyle.None;
         }
         
