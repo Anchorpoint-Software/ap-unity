@@ -199,6 +199,12 @@ namespace Anchorpoint.Editor
                         return;
                     }
                     
+                    if (!PluginInitializer.IsConnected)
+                    {
+                        RefreshView();
+                        return;
+                    }
+                    
                     var itemData = (ProjectData)checkbox.userData;
                     itemData.IsChecked = evt.newValue;
 
@@ -1112,6 +1118,11 @@ namespace Anchorpoint.Editor
             // When the commit button is clicked, gather selected files and commit them
             commitButton.clickable.clicked += () =>
             {
+                if (!PluginInitializer.IsConnected)
+                {
+                    RefreshView();
+                    return;
+                }
                 string commitMessage = commitMessageField.value;
                 List<string> filesToCommit = GetSelectedFiles();
                 
@@ -1133,6 +1144,12 @@ namespace Anchorpoint.Editor
             
             revertButton.clickable.clicked += () =>
             {
+                if (!PluginInitializer.IsConnected)
+                {
+                    RefreshView();
+                    return;
+                }
+                
                 List<string> filesToRevert = GetSelectedFiles();
                 
                 if (IsAnyFileSelected())
