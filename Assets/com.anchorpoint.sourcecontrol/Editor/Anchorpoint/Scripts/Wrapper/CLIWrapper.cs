@@ -197,9 +197,8 @@ namespace Anchorpoint.Wrapper
         {
             Output = string.Empty;
             AnchorpointLogger.Log($"Running Command: {commandText}");
-            
             AddOutput($"<color=green>Running Command: {commandText}</color>");
-
+            
             try
             {
                 ProcessStartInfo startInfo = new()
@@ -214,7 +213,7 @@ namespace Anchorpoint.Wrapper
 
                 using Process process = new() { StartInfo = startInfo };
                 process.Start();
-
+                
                 if (sequential)
                 {
                     process.ErrorDataReceived += (sender, e) =>
@@ -224,6 +223,14 @@ namespace Anchorpoint.Wrapper
                             AnchorpointLogger.Log($"Output: {e.Data}");
                             AnchorpointEvents.RaiseCommandOutputReceived($"{ExtractInformation(e.Data)}");
                             AddOutput($"\n\nOutput:\n{e.Data}");
+
+                            string displayMessage = ExtractInformation(e.Data);
+                            displayMessage = displayMessage.Split('.')[0]; // Remove everything after the first dot
+                            if (displayMessage.Equals("Pushing git changes", StringComparison.OrdinalIgnoreCase))
+                            {
+                                isStatusQueuedAfterCommand = false;
+                                Status();
+                            }
                         }
                     };
                     process.BeginErrorReadLine();
@@ -244,13 +251,17 @@ namespace Anchorpoint.Wrapper
                 AnchorpointLogger.Log($"{command} Command Completed");
                 AnchorpointEvents.RaiseCommandOutputReceived($"{command} Command Completed");
                 AddOutput($"\n\n{command} Command Completed");
-
+                
+                // ReSharper disable once InvalidXmlDocComment
+                /// <summary>
+                /// Disabling this code as for now this thing is being handled through the CLI
+                /// </summary>
                 // Execute Status only after all other commands have completed
-                if (command != Command.Status && isStatusQueuedAfterCommand)
-                {
-                    isStatusQueuedAfterCommand = false;
-                    Status();
-                }
+                // if (command != Command.Status && isStatusQueuedAfterCommand)
+                // {
+                //     isStatusQueuedAfterCommand = false;
+                //     Status();
+                // }
 
                 QueueRefresh(command);  // Handle RefreshWindow logic here
             }
