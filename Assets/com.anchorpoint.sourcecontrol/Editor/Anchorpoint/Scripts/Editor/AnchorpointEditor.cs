@@ -943,8 +943,8 @@ namespace Anchorpoint.Editor
                     processingTextLabel.style.color = Color.red;
                     processingTextLabel.style.display = DisplayStyle.Flex;
 
-                    // Hide the message after 5 seconds
-                    EditorCoroutineUtility.StartCoroutineOwnerless(DelayedExecution(5f));
+                    // Hide the message after 10 seconds
+                    EditorCoroutineUtility.StartCoroutineOwnerless(DelayedExecution(10f));
                 }
                 
                 if (inProcess)
@@ -973,7 +973,7 @@ namespace Anchorpoint.Editor
                         displayMessage.Equals("Status Command Completed", StringComparison.OrdinalIgnoreCase))
                     {
                         SettingStateToNormal();
-                        EditorCoroutineUtility.StartCoroutineOwnerless(DelayedExecution(5f));
+                        EditorCoroutineUtility.StartCoroutineOwnerless(DelayedExecution(10f));
                     }
                 }
             };
@@ -1289,7 +1289,7 @@ namespace Anchorpoint.Editor
         
         IEnumerator DelayedExecution(float delayInSeconds)
         {
-            processingTextLabel.text = "Commit successful";
+            processingTextLabel.text = "Commit successful! Pushing in the background...";
             yield return new EditorWaitForSeconds(delayInSeconds); 
             processingTextLabel.style.color = Color.white;
             processingTextLabel.style.display = DisplayStyle.None;
