@@ -206,14 +206,30 @@ namespace Anchorpoint.Editor
                     }
                     
                     var itemData = (ProjectData)checkbox.userData;
-                    itemData.IsChecked = evt.newValue;
+                    bool isChecked = evt.newValue;
+                    
+                    var selectedItems = treeView.selectedIndices.Select(i => treeView.GetItemDataForIndex<ProjectData>(i)).ToList();
 
+                    if (selectedItems.Count > 1)
+                    {
+                        // Apply the checked state to all selected files
+                        foreach (var selectedItem in selectedItems)
+                        {
+                            selectedItem.IsChecked = isChecked;
+                        }
+                    }
+                    else
+                    {
+                        // If only one file is selected, toggle it normally
+                        itemData.IsChecked = isChecked;
+                    }
+                
                     // If the item is a directory, update all its children
                     if (itemData.IsDirectory && itemData.Children != null && itemData.Children.Any())
                     {
-                        SetAllCheckboxesRecursive(itemData.Children, evt.newValue);
+                        SetAllCheckboxesRecursive(itemData.Children, isChecked);
                     }
-
+                
                     var isAnyFileSelected = IsAnyFileSelected();
                     commitButton.SetEnabled(isAnyFileSelected); // Update the commit button state
                     revertButton.SetEnabled(isAnyFileSelected); // Update the revert button state
