@@ -24,6 +24,7 @@ namespace Anchorpoint.Editor
         private const string lockMeIcon = "2b87ed061126442709ab8f989fdf1783";
         private const string outdatedIcon = "952dff34c8a314eebbaecdab2e41d89e";
         private const string conflictIcon = "5b2f35ebbd6964f6da7714f1096d5ff3";
+        private const string modifiedOutdatedIcon = "92a029a406112a040ab98b0df6ac7cd7";
         private const string fallbackIcon = "813203bb4c32349fa8d051a2183c2ae1";
 
         private static string rootRelativePath;
@@ -138,7 +139,8 @@ namespace Anchorpoint.Editor
             }
             else if (outdatedFiles != null && outdatedFiles.Contains(commitPath))
             {
-                CacheIcon(commitPath, LoadIcon(outdatedIcon));
+                // File is both outdated and modified
+                CacheIcon(commitPath, status == "M" ? LoadIcon(modifiedOutdatedIcon) : LoadIcon(outdatedIcon));
             }
             else if (status == "A")
             {
