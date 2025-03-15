@@ -58,7 +58,7 @@ namespace Anchorpoint.Editor
 
             float bottomPadding = 0f;
             float sidePadding = 0f;
-
+            
             if (IsOneColumnLayout(selectionRect))
             {
                 bottomPadding = 0f;
@@ -69,7 +69,7 @@ namespace Anchorpoint.Editor
                 bottomPadding = 14f;
                 sidePadding = 0f;
             }
-
+            
             // Draw icon if available
             if (icon != null)
             {
@@ -98,12 +98,7 @@ namespace Anchorpoint.Editor
                 status = notStagedStatus;
             }
 
-            if (outdatedFiles != null && outdatedFiles.Contains(commitPath))
-            {
-                // File is both outdated and modified
-                CacheIcon(commitPath, status == "M" ? LoadIcon(modifiedOutdatedIcon) : LoadIcon(outdatedIcon));
-            }
-            else if (lockedFiles != null && lockedFiles.TryGetValue(commitPath, out var lockingUserEmail))
+            if (lockedFiles != null && lockedFiles.TryGetValue(commitPath, out var lockingUserEmail))
             {
                 string currentUserEmail = DataManager.GetCurrentUser()?.Email;
                 if (!string.IsNullOrEmpty(currentUserEmail))
@@ -137,10 +132,15 @@ namespace Anchorpoint.Editor
                         });
                     }
                 }
-            }
+            } 
             else if (status == "C")
             {
                 CacheIcon(commitPath, LoadIcon(conflictIcon));
+            }
+            else if (outdatedFiles != null && outdatedFiles.Contains(commitPath))
+            {
+                // File is both outdated and modified
+                CacheIcon(commitPath, status == "M" ? LoadIcon(modifiedOutdatedIcon) : LoadIcon(outdatedIcon));
             }
             else if (status == "A")
             {
@@ -177,7 +177,7 @@ namespace Anchorpoint.Editor
             }
             return original;
         }
-
+        
         private static void OnStatusUpdated()
         {
             EditorApplication.delayCall += () =>
@@ -256,7 +256,7 @@ namespace Anchorpoint.Editor
             {
                 return;
             }
-            foreach (var tex in IconCache.PersistentReferences) { }
+            foreach (var tex in IconCache.PersistentReferences) {  }
         }
     }
 }
