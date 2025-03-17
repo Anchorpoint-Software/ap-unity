@@ -98,7 +98,16 @@ namespace Anchorpoint.Editor
                 status = notStagedStatus;
             }
 
-            if (lockedFiles != null && lockedFiles.TryGetValue(commitPath, out var lockingUserEmail))
+            if (status == "C")
+            {
+                CacheIcon(commitPath, LoadIcon(conflictIcon));
+            }
+            else if (outdatedFiles != null && outdatedFiles.Contains(commitPath))
+            {
+                // File is both outdated and modified
+                CacheIcon(commitPath, status == "M" ? LoadIcon(modifiedOutdatedIcon) : LoadIcon(outdatedIcon));
+            }
+            else if (lockedFiles != null && lockedFiles.TryGetValue(commitPath, out var lockingUserEmail))
             {
                 string currentUserEmail = DataManager.GetCurrentUser()?.Email;
                 if (!string.IsNullOrEmpty(currentUserEmail))
@@ -133,22 +142,13 @@ namespace Anchorpoint.Editor
                     }
                 }
             } 
-            else if (status == "C")
+            else if (status == "M")
             {
-                CacheIcon(commitPath, LoadIcon(conflictIcon));
-            }
-            else if (outdatedFiles != null && outdatedFiles.Contains(commitPath))
-            {
-                // File is both outdated and modified
-                CacheIcon(commitPath, status == "M" ? LoadIcon(modifiedOutdatedIcon) : LoadIcon(outdatedIcon));
+                CacheIcon(commitPath, LoadIcon(modifyIcon));
             }
             else if (status == "A")
             {
                 CacheIcon(commitPath, LoadIcon(addIcon));
-            }
-            else if (status == "M")
-            {
-                CacheIcon(commitPath, LoadIcon(modifyIcon));
             }
         }
 
