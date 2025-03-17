@@ -960,7 +960,7 @@ namespace Anchorpoint.Editor
                     processingTextLabel.style.display = DisplayStyle.Flex;
 
                     // Hide the message after 10 seconds
-                    EditorCoroutineUtility.StartCoroutineOwnerless(DelayedExecution(10f));
+                    EditorCoroutineUtility.StartCoroutineOwnerless(DelayedExecution(5f));
                 }
                 
                 if (inProcess)
@@ -971,8 +971,17 @@ namespace Anchorpoint.Editor
                     Match match = Regex.Match(output, @"(\d+)");
                     if (match.Success)
                     {
-                        string progressValue = match.Groups[1].Value;
-                        processingTextLabel.text = $"Staging files: {progressValue}%...";
+                        if (displayMessage.Equals("Staging files", StringComparison.OrdinalIgnoreCase))
+                        {
+                            string progressValue = match.Groups[1].Value;
+                            processingTextLabel.text = $"Staging files: {progressValue}%...";
+                        }
+                        
+                        if (displayMessage.Equals("Pushing Git Changes", StringComparison.OrdinalIgnoreCase))
+                        {
+                            string progressValue = match.Groups[1].Value;
+                            processingTextLabel.text = $"Pushing in the background: {progressValue}%...";
+                        }
                     }
                     else
                     {
@@ -989,7 +998,7 @@ namespace Anchorpoint.Editor
                         displayMessage.Equals("Status Command Completed", StringComparison.OrdinalIgnoreCase))
                     {
                         SettingStateToNormal();
-                        EditorCoroutineUtility.StartCoroutineOwnerless(DelayedExecution(10f));
+                        // EditorCoroutineUtility.StartCoroutineOwnerless(DelayedExecution(5f));
                     }
                 }
             };
