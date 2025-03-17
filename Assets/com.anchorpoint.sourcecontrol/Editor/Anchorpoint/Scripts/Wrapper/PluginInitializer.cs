@@ -19,7 +19,10 @@ namespace Anchorpoint.Wrapper
         public static bool IsNotAnchorpointProject { get; private set; }
         public static bool IsProjectOpen { get; private set; }
         public static bool IsPlaymode { get; private set; }
+        
         private const string WasConnectedKey = "Anchorpoint_WasConnected";
+        private const double connectionCheckInterval = 30f;
+        private static double lastConnectionCheckTime;
 
         public static bool WasConnected
         {
@@ -38,6 +41,7 @@ namespace Anchorpoint.Wrapper
             AssemblyReloadEvents.beforeAssemblyReload += OnBeforeAssemblyReload;
             AssemblyReloadEvents.afterAssemblyReload += AfterAssemblyReload;
             EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
+            EditorApplication.update += PeriodicConnectionCheck;
         }
 
         private static void Initialize()
@@ -213,6 +217,25 @@ namespace Anchorpoint.Wrapper
             {
                 AnchorpointLogger.LogError($"Failed to read Editor.log: {ex.Message}");
                 return false; // Assume no errors if we can't read the file
+            }
+        }
+        
+        private static void PeriodicConnectionCheck()
+        {
+            // Get the current time in seconds
+            double currentTime = EditorApplication.timeSinceStartup;
+
+            // Check if the interval has passed
+            if (currentTime - lastConnectionCheckTime >= connectionCheckInterval)
+            {
+                lastConnectionCheckTime = currentTime;
+
+                // Perform the connection check
+                if (!IsPlaymode && WasConnected && !IsConnected)
+                {
+                    AnchorpointLogger.Log("Detected disconnection. Attempting to reconnect...");
+                    StartConnection();
+                }
             }
         }
         
