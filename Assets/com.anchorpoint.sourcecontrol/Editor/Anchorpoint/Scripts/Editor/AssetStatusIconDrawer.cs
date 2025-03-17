@@ -258,5 +258,12 @@ namespace Anchorpoint.Editor
             }
             foreach (var tex in IconCache.PersistentReferences) {  }
         }
+        
+        // This function will do the optimistic update of the icons
+        public static void MarkAssetAsModified(string commitPath)
+        {
+            CacheIcon(commitPath, LoadIcon(modifyIcon));
+            EditorApplication.RepaintProjectWindow();
+        }
     }
 }

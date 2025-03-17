@@ -31,7 +31,6 @@ namespace Anchorpoint.Editor
             }
 
             string currentUserEmail = currentUser!=null ? currentUser.Email:"No user found";
-
             
             // Prepare a list for paths that are allowed to be saved
             List<string> allowedSavePaths = new List<string>();
@@ -57,6 +56,9 @@ namespace Anchorpoint.Editor
 
                 // If the file is not locked or locked by the current user, add it to the allowed list
                 allowedSavePaths.Add(path);
+                
+                // Mark asset as modified in UI this is for the optimistic update for status icon
+                AssetStatusIconDrawer.MarkAssetAsModified(commitPath);
             }
 
             // Return only the paths that are allowed to be saved
