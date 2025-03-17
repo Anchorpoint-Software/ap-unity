@@ -100,6 +100,8 @@ namespace Anchorpoint.Editor
         private void OnEditorUpdate()
         {
             AnchorpointLogger.Log( CLIWrapper.isWindowActive.ToString());
+         
+            ChangingIndRefreshButton(true);
             
             if (!CLIWrapper.isWindowActive) return;
             
@@ -1254,6 +1256,7 @@ namespace Anchorpoint.Editor
             refreshImg.style.display = DisplayStyle.None;
             CLIWrapper.Status();
             ChangingUIInProgress(false);
+            ChangingIndRefreshButton(false);
         }
 
         private void Disconnect()
@@ -1304,14 +1307,17 @@ namespace Anchorpoint.Editor
         {
             allButton.SetEnabled(flag);
             noneButton.SetEnabled(flag);
-            refreshButton.SetEnabled(flag);
             disconnectButton.SetEnabled(flag);
-            helpConnectedWinButton.SetEnabled(flag);
             commitMessageField.SetEnabled(flag);
             commitButton.SetEnabled(flag);
             revertButton.SetEnabled(flag);
         }
         
+        private void ChangingIndRefreshButton(bool flag)
+        {
+            refreshButton.SetEnabled(flag);
+        }
+
         IEnumerator DelayedExecution(float delayInSeconds)
         {
             processingTextLabel.text = "Commit successful! Pushing in the background...";
