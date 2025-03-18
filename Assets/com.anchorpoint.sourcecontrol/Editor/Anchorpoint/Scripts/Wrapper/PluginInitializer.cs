@@ -233,7 +233,7 @@ namespace Anchorpoint.Wrapper
                 // Perform the connection check
                 if (!IsPlaymode && WasConnected && !IsConnected)
                 {
-                    AnchorpointLogger.Log("Detected disconnection. Attempting to reconnect...");
+                    AnchorpointLogger.LogWarning("Detected disconnection. Attempting to reconnect...");
                     StartConnection();
                 }
             }

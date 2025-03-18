@@ -1144,7 +1144,7 @@ namespace Anchorpoint.Editor
             }
             else if(hasMetaFile)
             {
-                changesLabel.text = $"{totalChanges} changed files (without meta files)";
+                changesLabel.text = $"{totalNonMetaFiles} changed files (without meta files)";
             }
             else
             {
