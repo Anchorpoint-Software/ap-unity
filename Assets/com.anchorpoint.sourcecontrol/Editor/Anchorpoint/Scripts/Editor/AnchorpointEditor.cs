@@ -82,6 +82,8 @@ namespace Anchorpoint.Editor
         private int currentFrame = 0;
         private float frameRate = 0.1f; // 0.1 sec per frame
         private double lastFrameTime;
+
+        private const float textScreenTime = 5f;
         
         private void OnEnable()
         {
@@ -962,24 +964,22 @@ namespace Anchorpoint.Editor
                     processingTextLabel.style.display = DisplayStyle.Flex;
 
                     // Hide the message after 10 seconds
-                    EditorCoroutineUtility.StartCoroutineOwnerless(DelayedExecution(5f));
+                    EditorCoroutineUtility.StartCoroutineOwnerless(DelayedExecution(textScreenTime));
                 }
                 
                 if (inProcess)
                 {
-                    string displayMessage = output.Split('.')[0]; // Remove everything after the first dot
-                    
                     // Check if progress is included in the output
                     Match match = Regex.Match(output, @"(\d+)");
                     if (match.Success)
                     {
-                        if (displayMessage.Equals("Staging files", StringComparison.OrdinalIgnoreCase))
+                        if (output.Contains("Staging files", StringComparison.OrdinalIgnoreCase))
                         {
                             string progressValue = match.Groups[1].Value;
                             processingTextLabel.text = $"Staging files: {progressValue}%...";
                         }
                         
-                        if (displayMessage.Equals("Pushing Git Changes", StringComparison.OrdinalIgnoreCase))
+                        if (output.Contains("Pushing Git Changes", StringComparison.OrdinalIgnoreCase))
                         {
                             string progressValue = match.Groups[1].Value;
                             processingTextLabel.text = $"Pushing in the background: {progressValue}%...";
@@ -987,20 +987,30 @@ namespace Anchorpoint.Editor
                     }
                     else
                     {
-                        processingTextLabel.text = $"{displayMessage}...";
+                        processingTextLabel.text = $"{output}...";
                     }
                     
-                    if (displayMessage.Equals("Revert Command Completed", StringComparison.OrdinalIgnoreCase))
+                    if (output.Equals("Revert Command Completed", StringComparison.OrdinalIgnoreCase))
                     {
                         processingTextLabel.text = "Reverting completed";
                         SettingStateToNormal();
                     }
 
-                    if (displayMessage.Equals("Pushing git changes", StringComparison.OrdinalIgnoreCase) ||
-                        displayMessage.Equals("Status Command Completed", StringComparison.OrdinalIgnoreCase))
+                    if (output.Equals("Pushing git changes", StringComparison.OrdinalIgnoreCase) ||
+                        output.Equals("Status Command Completed", StringComparison.OrdinalIgnoreCase))
                     {
                         SettingStateToNormal();
-                        // EditorCoroutineUtility.StartCoroutineOwnerless(DelayedExecution(5f));
+                    }
+                    
+                    if (output.Equals("Push successful", StringComparison.OrdinalIgnoreCase))
+                    {
+                        processingTextLabel.text = "Push successful";
+                        EditorCoroutineUtility.StartCoroutineOwnerless(DelayedExecution(textScreenTime));
+                    }
+                    else if (output.Equals("Push successful", StringComparison.OrdinalIgnoreCase))
+                    {
+                        processingTextLabel.text = "Push canceled";
+                        EditorCoroutineUtility.StartCoroutineOwnerless(DelayedExecution(textScreenTime));
                     }
                 }
             };
@@ -1320,7 +1330,6 @@ namespace Anchorpoint.Editor
 
         IEnumerator DelayedExecution(float delayInSeconds)
         {
-            processingTextLabel.text = "Commit successful! Pushing in the background...";
             yield return new EditorWaitForSeconds(delayInSeconds); 
             processingTextLabel.style.color = Color.white;
             processingTextLabel.style.display = DisplayStyle.None;

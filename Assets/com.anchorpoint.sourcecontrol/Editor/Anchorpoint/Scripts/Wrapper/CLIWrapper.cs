@@ -4,6 +4,7 @@ using System.Diagnostics;
 using Anchorpoint.Parser;
 using Anchorpoint.Constants;
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 using System.Threading;
 using Anchorpoint.Events;
 using Anchorpoint.Logger;
@@ -251,17 +252,6 @@ namespace Anchorpoint.Wrapper
                 AnchorpointLogger.Log($"{command} Command Completed");
                 AnchorpointEvents.RaiseCommandOutputReceived($"{command} Command Completed");
                 AddOutput($"\n\n{command} Command Completed");
-                
-                // ReSharper disable once InvalidXmlDocComment
-                /// <summary>
-                /// Disabling this code as for now this thing is being handled through the CLI
-                /// </summary>
-                // Execute Status only after all other commands have completed
-                // if (command != Command.Status && isStatusQueuedAfterCommand)
-                // {
-                //     isStatusQueuedAfterCommand = false;
-                //     Status();
-                // }
 
                 QueueRefresh(command);  // Handle RefreshWindow logic here
             }
@@ -374,22 +364,37 @@ namespace Anchorpoint.Wrapper
                     break;
             }
         }
-
+        
         private static string ExtractInformation(string input)
         {
-            int colonIndex = input.LastIndexOf(':');
-            if (colonIndex != -1 && colonIndex + 1 < input.Length)
-            {
-                // Extract the string after the colon and trim any excess whitespace
-                string lastPart = input.Substring(colonIndex + 1).Trim();
-            
-                lastPart = lastPart.Replace("}", "").Replace("\"", "").Trim();
-            
-                lastPart = char.ToUpper(lastPart[0]) + lastPart.Substring(1).ToLower();
+            if (string.IsNullOrWhiteSpace(input))
+                return string.Empty; // Return early if input is null or empty
 
-                return lastPart;
+            try
+            {
+                // Handle malformed JSON where closing quote is missing
+                if (input.Contains("\"progress-text\"") && !input.Trim().EndsWith("\"}") && !input.Contains("\"progress-value\""))
+                {
+                    input = input.Trim() + "\"}";
+                }
+
+                // Extract "progress-text" and remove anything after the first dot
+                Match textMatch = Regex.Match(input, "\"progress-text\"\\s*:\\s*\"([^\"]+)");
+                string progressText = textMatch.Success ? textMatch.Groups[1].Value.Split('.')[0].Trim().TrimEnd('}') : "";
+
+                // Extract "progress-value", return empty space if missing
+                Match valueMatch = Regex.Match(input, "\"progress-value\"\\s*:\\s*(\\d+)");
+                string progressValue = valueMatch.Success ? valueMatch.Groups[1].Value.Trim() : "";
+
+                // Ensure the format is correct: "Finding binary files, progress-value: 50" or just "Finding binary files"
+                return string.IsNullOrEmpty(progressValue) ? progressText : $"{progressText}, progress-value: {progressValue}";
             }
-            return string.Empty;
+            catch (Exception ex)
+            {
+                AnchorpointLogger.LogError($"Error extracting information: {ex.Message}");
+                return string.Empty;
+            }
         }
+        
     }
 }
