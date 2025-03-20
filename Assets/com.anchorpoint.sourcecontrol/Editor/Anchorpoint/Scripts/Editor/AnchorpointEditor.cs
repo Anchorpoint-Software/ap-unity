@@ -1139,7 +1139,7 @@ namespace Anchorpoint.Editor
             }
             else if(totalMetaFiles > 0 && totalNonMetaFiles == 0)       // Condition where there are only metafiles
             {
-                changesLabel.text = $"{totalMetaFiles} metafiles modified";
+                changesLabel.text = totalMetaFiles + " " + (totalMetaFiles > 1 ? "metafiles" : "metafile") + " modified";
                 onlyMetafilesDescriptionLabel.style.display = DisplayStyle.Flex;
             }
             else if(hasMetaFile)
