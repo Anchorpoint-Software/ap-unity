@@ -1329,6 +1329,7 @@ namespace Anchorpoint.Editor
         private void HasConflictedFiles()
         {
             CLIStatus status = DataManager.GetStatus();
+            
             if (status == null)
             {
                 return;
@@ -1339,10 +1340,7 @@ namespace Anchorpoint.Editor
             {
                 foreach (var fileStatus in status.Staged.Values)
                 {
-                    if (fileStatus == "C")
-                    {
-                        hasConflict = true;
-                    }
+                    hasConflict = fileStatus == "C";
                 }
             }
 
@@ -1351,10 +1349,7 @@ namespace Anchorpoint.Editor
             {
                 foreach (var fileStatus in status.NotStaged.Values)
                 {
-                    if (fileStatus == "C") 
-                    {
-                        hasConflict = true;
-                    }
+                    hasConflict = fileStatus == "C";
                 }
             }
             

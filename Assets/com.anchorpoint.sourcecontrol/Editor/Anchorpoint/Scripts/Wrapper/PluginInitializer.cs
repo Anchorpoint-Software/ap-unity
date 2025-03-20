@@ -13,7 +13,6 @@ namespace Anchorpoint.Wrapper
     public static class PluginInitializer
     {
         private static ConnectCommandHandler connectHandler;
-        private static Timer statusPollingTimer;
         public static bool IsInitialized => connectHandler != null;
         public static bool IsConnected => connectHandler?.IsConnected() ?? false;
         public static bool IsNotAnchorpointProject { get; private set; }
@@ -89,7 +88,6 @@ namespace Anchorpoint.Wrapper
         private static void StopConnection()
         {
             connectHandler?.StopConnect();
-            StopStatusPolling();
             AnchorpointLogger.Log("Connection stopped");
         }
 
@@ -144,12 +142,10 @@ namespace Anchorpoint.Wrapper
                 case "project opened":
                     IsProjectOpen = true;
                     SetNoProjectState(false);
-                    StopStatusPolling();
                     break;
                 case "project closed":
                     IsProjectOpen = false;
                     SetNoProjectState(false);
-                    StartStatusPolling();
                     break;
                 case "project dirty":
                     CLIWrapper.Status();
@@ -164,23 +160,7 @@ namespace Anchorpoint.Wrapper
 
             AnchorpointEvents.RaiseRefreshView();
         }
-
-        private static void StartStatusPolling()
-        {
-            if (statusPollingTimer == null)
-            {
-                statusPollingTimer = new Timer(5 * 60 * 1000); // 5 minutes
-                statusPollingTimer.Elapsed += (sender, e) => CLIWrapper.Status();
-            }
-
-            statusPollingTimer.Start();
-        }
-
-        private static void StopStatusPolling()
-        {
-            statusPollingTimer?.Stop();
-        }
-
+        
         private static void FetchCurrentUser()
         {
             if (DataManager.GetCurrentUser() == null)
