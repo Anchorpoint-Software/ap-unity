@@ -4,11 +4,11 @@ using System.Diagnostics;
 using Anchorpoint.Parser;
 using Anchorpoint.Constants;
 using System.Collections.Generic;
-using System.Text.RegularExpressions;
 using System.Threading;
 using Anchorpoint.Events;
 using Anchorpoint.Logger;
 using UnityEditor;
+using UnityEngine;
 
 namespace Anchorpoint.Wrapper
 {
@@ -222,14 +222,14 @@ namespace Anchorpoint.Wrapper
                         if (!string.IsNullOrEmpty(e.Data))
                         {
                             AnchorpointLogger.Log($"Output: {e.Data}");
-                            AnchorpointEvents.RaiseCommandOutputReceived($"{ExtractInformation(e.Data)}");
+                            AnchorpointEvents.RaiseCommandOutputReceived($"{e.Data}");
                             AddOutput($"\n\nOutput:\n{e.Data}");
-
-                            string displayMessage = ExtractInformation(e.Data);
-                            displayMessage = displayMessage.Split('.')[0]; // Remove everything after the first dot
-                            if (displayMessage.Equals("Pushing git changes", StringComparison.OrdinalIgnoreCase))
+                            
+                            if (e.Data.Contains("Pushing git changes", StringComparison.OrdinalIgnoreCase))
                             {
+                                AnchorpointLogger.LogWarning("Pushing git changes");
                                 isStatusQueuedAfterCommand = false;
+                                AnchorpointEvents.inProgress = false;
                                 Status();
                             }
                         }
@@ -364,37 +364,5 @@ namespace Anchorpoint.Wrapper
                     break;
             }
         }
-        
-        private static string ExtractInformation(string input)
-        {
-            if (string.IsNullOrWhiteSpace(input))
-                return string.Empty; // Return early if input is null or empty
-
-            try
-            {
-                // Handle malformed JSON where closing quote is missing
-                if (input.Contains("\"progress-text\"") && !input.Trim().EndsWith("\"}") && !input.Contains("\"progress-value\""))
-                {
-                    input = input.Trim() + "\"}";
-                }
-
-                // Extract "progress-text" and remove anything after the first dot
-                Match textMatch = Regex.Match(input, "\"progress-text\"\\s*:\\s*\"([^\"]+)");
-                string progressText = textMatch.Success ? textMatch.Groups[1].Value.Split('.')[0].Trim().TrimEnd('}') : "";
-
-                // Extract "progress-value", return empty space if missing
-                Match valueMatch = Regex.Match(input, "\"progress-value\"\\s*:\\s*(\\d+)");
-                string progressValue = valueMatch.Success ? valueMatch.Groups[1].Value.Trim() : "";
-
-                // Ensure the format is correct: "Finding binary files, progress-value: 50" or just "Finding binary files"
-                return string.IsNullOrEmpty(progressValue) ? progressText : $"{progressText}, progress-value: {progressValue}";
-            }
-            catch (Exception ex)
-            {
-                AnchorpointLogger.LogError($"Error extracting information: {ex.Message}");
-                return string.Empty;
-            }
-        }
-        
     }
 }

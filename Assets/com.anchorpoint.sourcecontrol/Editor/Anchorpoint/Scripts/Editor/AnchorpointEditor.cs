@@ -73,7 +73,7 @@ namespace Anchorpoint.Editor
         // Now count unique files from the merged dictionary
         private HashSet<string> processedFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         
-        private bool inProcess = false;      // Flag to check is if some commit/revert is in process
+        private bool inProcess = false;       // Flag to check is if some commit/revert is in process
         private bool hasConflict = false;      // Flag to check is if some conflict
         private bool hasMetaFile = false;       // Flag to check if there is meta file in changed files
         
@@ -946,71 +946,86 @@ namespace Anchorpoint.Editor
         
         private void OnCommandOutputReceived(string output)
         {
-            // Update the UI on the main thread
+            AnchorpointLogger.LogError(output);
+
             EditorApplication.delayCall += () =>
             {
+                // Handle errors explicitly
                 if (output.Contains("\"error\":"))
                 {
-                    // Parse the error message using Regex or a JSON parser
+                    AnchorpointLogger.LogError("This condition is met for the error");
+                    
                     string errorMessage = Regex.Match(output, "\"error\"\\s*:\\s*\"([^\"]+)\"").Groups[1].Value;
-
-                    // Log the error to the console
-                    // This is the only error message that will bypass the Anchorpoint Logger class
                     Debug.LogError($"Error: {errorMessage}");
+                    
+                    processingTextLabel.text = output.Contains("canceled", StringComparison.OrdinalIgnoreCase) ? "Push canceled" : "An issue has occurred. Check the console.";
 
-                    // Set the progress text to show the error
-                    processingTextLabel.text = "An issue has occurred. Check the console.";
+                    
                     processingTextLabel.style.color = Color.red;
                     processingTextLabel.style.display = DisplayStyle.Flex;
-
-                    // Hide the message after 10 seconds
                     EditorCoroutineUtility.StartCoroutineOwnerless(DelayedExecution(textScreenTime));
+                    SettingStateToNormal();
+                    return;
                 }
+
+                // Handle progress updates
+                Match progressMatch = Regex.Match(output, "\"progress-text\"\\s*:\\s*\"([^\"]+)\"");
+                Match progressValueMatch = Regex.Match(output, "\"progress-value\"\\s*:\\s*(\\d+)");
                 
                 if (inProcess)
                 {
-                    // Check if progress is included in the output
-                    Match match = Regex.Match(output, @"(\d+)");
-                    if (match.Success)
+                    if (progressMatch.Success)
                     {
-                        if (output.Contains("Staging files", StringComparison.OrdinalIgnoreCase))
+                        string progressText = progressMatch.Groups[1].Value;
+                        string progressValue = progressValueMatch.Success ? progressValueMatch.Groups[1].Value : "";
+
+                        if (progressText.Contains("Staging files", StringComparison.OrdinalIgnoreCase))
                         {
-                            string progressValue = match.Groups[1].Value;
-                            processingTextLabel.text = $"Staging files: {progressValue}%...";
+                            processingTextLabel.text = string.IsNullOrEmpty(progressValue) ? "Staging files..." : $"Staging files: {progressValue}%...";
                         }
-                        
-                        if (output.Contains("Pushing Git Changes", StringComparison.OrdinalIgnoreCase))
+                        else if (progressText.Contains("Pushing git changes", StringComparison.OrdinalIgnoreCase))
                         {
-                            string progressValue = match.Groups[1].Value;
-                            processingTextLabel.text = $"Pushing in the background: {progressValue}%...";
+                            processingTextLabel.text = string.IsNullOrEmpty(progressValue) ? "Pushing in the background..." : $"Pushing in the background: {progressValue}%...";
+                        }
+                        else
+                        {
+                            processingTextLabel.text = $"{progressText}...";
                         }
                     }
                     else
                     {
-                        processingTextLabel.text = $"{output}...";
+                        string trimmedOutput = output.Split('.')[0]
+                            .Replace("{\"progress-text\": \"", "")
+                            .Replace("}", "")
+                            .Trim();
+                        processingTextLabel.text = $"{trimmedOutput}...";
                     }
-                    
+
                     if (output.Equals("Revert Command Completed", StringComparison.OrdinalIgnoreCase))
                     {
                         processingTextLabel.text = "Reverting completed";
                         SettingStateToNormal();
                     }
-
-                    if (output.Equals("Pushing git changes", StringComparison.OrdinalIgnoreCase) ||
-                        output.Equals("Status Command Completed", StringComparison.OrdinalIgnoreCase))
+                    else if (output.Contains("Talking to Server", StringComparison.OrdinalIgnoreCase))
                     {
                         SettingStateToNormal();
                     }
-                    
-                    if (output.Equals("Push successful", StringComparison.OrdinalIgnoreCase))
+                    else if (output.Contains("successful", StringComparison.OrdinalIgnoreCase))
                     {
                         processingTextLabel.text = "Push successful";
+                        SettingStateToNormal();
                         EditorCoroutineUtility.StartCoroutineOwnerless(DelayedExecution(textScreenTime));
                     }
-                    else if (output.Equals("Push successful", StringComparison.OrdinalIgnoreCase))
+                }
+
+                // Handling the case where the InProcess is updated due to the status refresh
+                if (progressMatch.Success)
+                {
+                    string progressText = progressMatch.Groups[1].Value;
+                    if (progressText.Contains("Uploading Files", StringComparison.OrdinalIgnoreCase))
                     {
-                        processingTextLabel.text = "Push canceled";
-                        EditorCoroutineUtility.StartCoroutineOwnerless(DelayedExecution(textScreenTime));
+                        processingTextLabel.style.display = DisplayStyle.Flex;
+                        processingTextLabel.text = progressText;
                     }
                 }
             };
@@ -1376,6 +1391,7 @@ namespace Anchorpoint.Editor
             else
             {
                 hasConflict = false;
+                SettingStateToNormal();
             }
         }
         
