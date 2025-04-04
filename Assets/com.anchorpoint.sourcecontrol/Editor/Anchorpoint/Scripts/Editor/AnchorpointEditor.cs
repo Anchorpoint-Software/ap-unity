@@ -235,7 +235,7 @@ namespace Anchorpoint.Editor
                     }
                 
                     var isAnyFileSelected = IsAnyFileSelected();
-                    commitButton.SetEnabled(isAnyFileSelected); // Update the commit button state
+                    commitButton.SetEnabled(isAnyFileSelected && !string.IsNullOrWhiteSpace(commitMessageField.value));// Update the commit button state
                     revertButton.SetEnabled(isAnyFileSelected); // Update the revert button state
                     commitMessageField.SetEnabled(isAnyFileSelected);
                     // Refresh all visible items in the tree view
@@ -1184,6 +1184,14 @@ namespace Anchorpoint.Editor
             
             conflictLable = root.Q<Label>("ConflictNotice");
             conflictLable.style.display = DisplayStyle.None;
+            
+            // Register callback to track changes in the commit message field
+            commitMessageField.RegisterValueChangedCallback(evt =>
+            {
+                // Enable the commit button only if the commit message isn't empty or whitespace
+                // and at least one file is selected for commit.
+                commitButton.SetEnabled(!string.IsNullOrWhiteSpace(evt.newValue) && IsAnyFileSelected());
+            });
             
             // When the commit button is clicked, gather selected files and commit them
             commitButton.clickable.clicked += () =>
