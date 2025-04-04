@@ -983,13 +983,13 @@ namespace Anchorpoint.Editor
                         {
                             processingTextLabel.text = string.IsNullOrEmpty(progressValue) ? "Staging files..." : $"Staging files: {progressValue}%...";
                         }
-                        else if (progressText.Contains("Syncing Git changes", StringComparison.OrdinalIgnoreCase))
+                        else if (progressText.Contains("Pushing git changes", StringComparison.OrdinalIgnoreCase))
                         {
                             processingTextLabel.text = string.IsNullOrEmpty(progressValue) ? "Pushing in the background..." : $"Pushing in the background: {progressValue}%...";
                         }
                         else
                         {
-                            processingTextLabel.text = $"{progressText}";
+                            processingTextLabel.text = $"{progressText}...";
                         }
                     }
                     else
@@ -1012,7 +1012,7 @@ namespace Anchorpoint.Editor
                     }
                     else if (output.Contains("successful", StringComparison.OrdinalIgnoreCase))
                     {
-                        processingTextLabel.text = "Sync successful";
+                        processingTextLabel.text = "Push successful";
                         SettingStateToNormal();
                         EditorCoroutineUtility.StartCoroutineOwnerless(DelayedExecution(textScreenTime));
                     }
