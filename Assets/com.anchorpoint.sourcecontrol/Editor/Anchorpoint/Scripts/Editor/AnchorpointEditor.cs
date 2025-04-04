@@ -949,6 +949,7 @@ namespace Anchorpoint.Editor
 
             EditorApplication.delayCall += () =>
             {
+                AnchorpointLogger.Log(output);
                 processingTextLabel.style.display = DisplayStyle.Flex;
                 string[] ignoredOutputs = new string[] { "Status Command Completed", "UserList", "Output:" };
                 
@@ -993,6 +994,7 @@ namespace Anchorpoint.Editor
                     if (output.Equals("Revert Command Completed", StringComparison.OrdinalIgnoreCase))
                     {
                         processingTextLabel.text = "Reverting completed";
+                        EditorCoroutineUtility.StartCoroutineOwnerless(DelayedExecution(textScreenTime));
                         SettingStateToNormal();
                     }
                     else if (output.Equals("Sync Command Completed", StringComparison.OrdinalIgnoreCase))
