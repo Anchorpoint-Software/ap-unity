@@ -1,5 +1,7 @@
 using UnityEngine;
 using Newtonsoft.Json;
+using System;
+using System.Text.RegularExpressions;
 
 namespace Anchorpoint.Parser
 {
@@ -9,6 +11,7 @@ namespace Anchorpoint.Parser
         {
             try
             {
+                json = SanitizeJsonString(json);
                 return JsonConvert.DeserializeObject<T>(json);
             }
             catch (JsonException ex)
@@ -16,6 +19,16 @@ namespace Anchorpoint.Parser
                 Debug.LogError($"Failed to parse JSON: {ex.Message}");
                 return default;
             }
+        }
+
+        private static string SanitizeJsonString(string json)
+        {
+            return Regex.Replace(json, @"\\x([0-9A-Fa-f]{2})", match =>
+            {
+                string hexValue = match.Groups[1].Value;
+                int intValue = Convert.ToInt32(hexValue, 16);
+                return $"\\u{intValue:X4}";
+            });
         }
     }
 }
