@@ -29,6 +29,8 @@ namespace Anchorpoint.Editor
 
         private static string rootRelativePath;
 
+        private static List<string> optimisticUpdateKeys = new List<string>();
+
         static AssetStatusIconDrawer()
         {
             EditorApplication.projectWindowItemOnGUI += OnProjectWindowItemOnGUI;
@@ -190,7 +192,7 @@ namespace Anchorpoint.Editor
         private static void RefreshStatusData()
         {
             CLIStatus status = DataManager.GetStatus();
-
+            
             if (status != null)
             {
                 stagedFiles = status.Staged;
@@ -202,8 +204,15 @@ namespace Anchorpoint.Editor
                 updatedFiles.UnionWith(notStagedFiles.Keys);
                 updatedFiles.UnionWith((IEnumerable<string>)lockedFiles.Keys ?? new HashSet<string>());
                 updatedFiles.UnionWith(outdatedFiles ?? new HashSet<string>());
-
+                
                 var keysToRemove = new List<string>();
+                
+                foreach (var key in optimisticUpdateKeys)
+                {
+                    keysToRemove.Add(key);
+                }
+                optimisticUpdateKeys.Clear();
+
                 foreach (var key in IconCache.Icons.Keys)
                 {
                     if (!updatedFiles.Contains(key))
@@ -262,6 +271,7 @@ namespace Anchorpoint.Editor
         // This function will do the optimistic update of the icons
         public static void MarkAssetAsModified(string commitPath)
         {
+            optimisticUpdateKeys.Add(commitPath);
             CacheIcon(commitPath, LoadIcon(modifyIcon));
             EditorApplication.RepaintProjectWindow();
         }
