@@ -1016,6 +1016,16 @@ namespace Anchorpoint.Editor
                         SettingStateToNormal();
                         EditorCoroutineUtility.StartCoroutineOwnerless(DelayedExecution(textScreenTime));
                     }
+                    if (output.Contains("Status Command Completed", StringComparison.OrdinalIgnoreCase))
+                    {
+                        AnchorpointLogger.Log("Status Command Complete Called");
+                        HasConflictedFiles();
+                        if (hasConflict)
+                        {
+                            RefreshView();
+                            EditorCoroutineUtility.StartCoroutineOwnerless(DelayedExecution(0f));
+                        }
+                    }
                 }
 
                 // Handling the case where the InProcess is updated due to the status refresh

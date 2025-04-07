@@ -29,8 +29,6 @@ namespace Anchorpoint.Editor
 
         private static string rootRelativePath;
 
-        private static List<string> optimisticUpdateKeys = new List<string>();
-
         static AssetStatusIconDrawer()
         {
             EditorApplication.projectWindowItemOnGUI += OnProjectWindowItemOnGUI;
@@ -47,36 +45,28 @@ namespace Anchorpoint.Editor
                 return;
             }
 
-            // Get the asset path from the GUID
             string path = AssetDatabase.GUIDToAssetPath(guid);
             string commitPath = GetCommitPath(path);
 
-            // Check if we have an icon cached
-            if (!IconCache.Icons.TryGetValue(commitPath, out var icon))
+            IconCache.Icons.TryGetValue(commitPath, out var existingIcon);
+
+            // Always fetch and compare the latest icon
+            CacheIconForCommitPath(commitPath);
+            IconCache.Icons.TryGetValue(commitPath, out var latestIcon);
+
+            // Update icon if it has changed
+            if (existingIcon != latestIcon)
             {
-                CacheIconForCommitPath(commitPath);
-                IconCache.Icons.TryGetValue(commitPath, out icon);
+                IconCache.Icons[commitPath] = latestIcon;
+                EditorApplication.RepaintProjectWindow();
             }
 
-            float bottomPadding = 0f;
-            float sidePadding = 0f;
-            
-            if (IsOneColumnLayout(selectionRect))
-            {
-                bottomPadding = 0f;
-                sidePadding = 8f;
-            }
-            else
-            {
-                bottomPadding = 14f;
-                sidePadding = 0f;
-            }
-            
-            // Draw icon if available
-            if (icon != null)
-            {
-                float iconSize = 16f;
+            float bottomPadding = IsOneColumnLayout(selectionRect) ? 0f : 14f;
+            float sidePadding = IsOneColumnLayout(selectionRect) ? 8f : 0f;
 
+            if (latestIcon != null)
+            {
+                const float iconSize = 16f;
                 Rect iconRect = new Rect(
                     selectionRect.x + selectionRect.width - iconSize - sidePadding,
                     selectionRect.y + selectionRect.height - iconSize - bottomPadding,
@@ -84,7 +74,7 @@ namespace Anchorpoint.Editor
                     iconSize
                 );
 
-                GUI.DrawTexture(iconRect, icon);
+                GUI.DrawTexture(iconRect, latestIcon);
             }
         }
 
@@ -107,7 +97,7 @@ namespace Anchorpoint.Editor
             else if (outdatedFiles != null && outdatedFiles.Contains(commitPath))
             {
                 // File is both outdated and modified
-                CacheIcon(commitPath, status == "M" ? LoadIcon(modifiedOutdatedIcon) : LoadIcon(outdatedIcon));
+                CacheIcon(commitPath, status == "M" ? LoadIcon(modifiedOutdatedIcon): LoadIcon(outdatedIcon));
             }
             else if (lockedFiles != null && lockedFiles.TryGetValue(commitPath, out var lockingUserEmail))
             {
@@ -160,7 +150,9 @@ namespace Anchorpoint.Editor
             icon.hideFlags = HideFlags.DontUnloadUnusedAsset | HideFlags.HideAndDontSave;
             IconCache.Icons[key] = icon;
             if (!IconCache.PersistentReferences.Contains(icon))
+            {
                 IconCache.PersistentReferences.Add(icon);
+            }
         }
 
         private static Texture2D LoadIcon(string GUID)
@@ -206,12 +198,6 @@ namespace Anchorpoint.Editor
                 updatedFiles.UnionWith(outdatedFiles ?? new HashSet<string>());
                 
                 var keysToRemove = new List<string>();
-                
-                foreach (var key in optimisticUpdateKeys)
-                {
-                    keysToRemove.Add(key);
-                }
-                optimisticUpdateKeys.Clear();
 
                 foreach (var key in IconCache.Icons.Keys)
                 {
@@ -271,7 +257,7 @@ namespace Anchorpoint.Editor
         // This function will do the optimistic update of the icons
         public static void MarkAssetAsModified(string commitPath)
         {
-            optimisticUpdateKeys.Add(commitPath);
+            // optimisticUpdateKeys.Add(commitPath);
             CacheIcon(commitPath, LoadIcon(modifyIcon));
             EditorApplication.RepaintProjectWindow();
         }
