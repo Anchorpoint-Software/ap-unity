@@ -76,6 +76,7 @@ namespace Anchorpoint.Editor
         private bool inProcess = false;       // Flag to check is if some commit/revert is in process
         private bool hasConflict = false;      // Flag to check is if some conflict
         private bool hasMetaFile = false;       // Flag to check if there is meta file in changed files
+        private bool commandIncomplete = false;     // Flag to check if the command has run completely.
         
         // Spinner wheel animation things
         private List<Texture2D> gifFrames = new List<Texture2D>();
@@ -84,6 +85,7 @@ namespace Anchorpoint.Editor
         private double lastFrameTime;
 
         private const float textScreenTime = 5f;
+        private string cacheProcessingLabel;
         
         private void OnEnable()
         {
@@ -101,13 +103,10 @@ namespace Anchorpoint.Editor
 
         private void OnEditorUpdate()
         {
-            AnchorpointLogger.Log( CLIWrapper.isWindowActive.ToString());
-         
             ChangingIndRefreshButton(true);
-            
+
             if (!CLIWrapper.isWindowActive) return;
             
-            AnchorpointLogger.Log( CLIWrapper.isWindowActive.ToString());
             rootVisualElement.Clear();
             CreateGUI();
         }
@@ -146,6 +145,11 @@ namespace Anchorpoint.Editor
             }
             else if (PluginInitializer.IsInitialized && PluginInitializer.IsConnected)
             {
+                if (commandIncomplete)
+                {
+                    processingTextLabel.text = cacheProcessingLabel;
+                    StartSpinnerAnimation();
+                }
                 ShowConnectedWindow();
                 HasConflictedFiles();
             }
@@ -962,7 +966,6 @@ namespace Anchorpoint.Editor
 
                     
                     processingTextLabel.style.color = Color.red;
-                    processingTextLabel.style.display = DisplayStyle.Flex;
                     EditorCoroutineUtility.StartCoroutineOwnerless(DelayedExecution(textScreenTime));
                     SettingStateToNormal();
                     return;
@@ -972,70 +975,74 @@ namespace Anchorpoint.Editor
                 Match progressMatch = Regex.Match(output, "\"progress-text\"\\s*:\\s*\"([^\"]+)\"");
                 Match progressValueMatch = Regex.Match(output, "\"progress-value\"\\s*:\\s*(\\d+)");
                 
-                if (inProcess)
-                {
-                    if (progressMatch.Success)
-                    {
-                        string progressText = progressMatch.Groups[1].Value;
-                        string progressValue = progressValueMatch.Success ? progressValueMatch.Groups[1].Value : "";
-
-                        if (progressText.Contains("Staging files", StringComparison.OrdinalIgnoreCase))
-                        {
-                            processingTextLabel.text = string.IsNullOrEmpty(progressValue) ? "Staging files..." : $"Staging files: {progressValue}%...";
-                        }
-                        else if (progressText.Contains("Pushing git changes", StringComparison.OrdinalIgnoreCase))
-                        {
-                            processingTextLabel.text = string.IsNullOrEmpty(progressValue) ? "Pushing in the background..." : $"Pushing in the background: {progressValue}%...";
-                        }
-                        else
-                        {
-                            processingTextLabel.text = $"{progressText}...";
-                        }
-                    }
-                    else
-                    {
-                        string trimmedOutput = output.Split('.')[0]
-                            .Replace("{\"progress-text\": \"", "")
-                            .Replace("}", "")
-                            .Trim();
-                        processingTextLabel.text = $"{trimmedOutput}...";
-                    }
-
-                    if (output.Equals("Revert Command Completed", StringComparison.OrdinalIgnoreCase))
-                    {
-                        processingTextLabel.text = "Reverting completed";
-                        SettingStateToNormal();
-                    }
-                    else if (output.Contains("Talking to Server", StringComparison.OrdinalIgnoreCase))
-                    {
-                        SettingStateToNormal();
-                    }
-                    else if (output.Contains("successful", StringComparison.OrdinalIgnoreCase))
-                    {
-                        processingTextLabel.text = "Push successful";
-                        SettingStateToNormal();
-                        EditorCoroutineUtility.StartCoroutineOwnerless(DelayedExecution(textScreenTime));
-                    }
-                    if (output.Contains("Status Command Completed", StringComparison.OrdinalIgnoreCase))
-                    {
-                        AnchorpointLogger.Log("Status Command Complete Called");
-                        HasConflictedFiles();
-                        if (hasConflict)
-                        {
-                            RefreshView();
-                            EditorCoroutineUtility.StartCoroutineOwnerless(DelayedExecution(0f));
-                        }
-                    }
-                }
-
-                // Handling the case where the InProcess is updated due to the status refresh
                 if (progressMatch.Success)
                 {
                     string progressText = progressMatch.Groups[1].Value;
-                    if (progressText.Contains("Uploading Files", StringComparison.OrdinalIgnoreCase))
+                    string progressValue = progressValueMatch.Success ? progressValueMatch.Groups[1].Value : "";
+
+                    if (progressText.Contains("Staging files", StringComparison.OrdinalIgnoreCase))
                     {
-                        processingTextLabel.style.display = DisplayStyle.Flex;
+                        processingTextLabel.text = string.IsNullOrEmpty(progressValue) ? "Staging files..." : $"Staging files: {progressValue}%...";
+                    }
+                    else if (progressText.Contains("Pushing git changes", StringComparison.OrdinalIgnoreCase))
+                    {
+                        processingTextLabel.text = string.IsNullOrEmpty(progressValue) ? "Pushing in the background..." : $"Pushing in the background: {progressValue}%...";
+                    }
+                    else if (progressText.Contains("Uploading Files", StringComparison.OrdinalIgnoreCase))
+                    {
                         processingTextLabel.text = progressText;
+                    }
+                    else
+                    {
+                        processingTextLabel.text = $"{progressText}...";
+                    }
+                }
+                else
+                {
+                    string trimmedOutput = output.Split('.')[0]
+                        .Replace("{\"progress-text\": \"", "")
+                        .Replace("}", "")
+                        .Trim();
+                    processingTextLabel.text = $"{trimmedOutput}...";
+                }
+
+                if (output.Equals("Revert Command Completed", StringComparison.OrdinalIgnoreCase))
+                {
+                    processingTextLabel.text = "Reverting completed";
+                    SettingStateToNormal();
+                }
+                else if (output.Contains("Talking to Server", StringComparison.OrdinalIgnoreCase))
+                {
+                    SettingStateToNormal();
+                }
+                else if (output.Contains("Pushing git changes", StringComparison.OrdinalIgnoreCase))
+                {
+                    cacheProcessingLabel = processingTextLabel.text;
+                    AnchorpointLogger.LogWarning("Pushing git changes");
+                    CLIWrapper.isStatusQueuedAfterCommand = false;
+                    AnchorpointEvents.inProgress = false;
+                    CLIWrapper.Status();
+                }
+                else if (output.Contains("successful", StringComparison.OrdinalIgnoreCase))
+                {
+                    processingTextLabel.text = "Push successful";
+                    SettingStateToNormal();
+                    EditorCoroutineUtility.StartCoroutineOwnerless(DelayedExecution(textScreenTime));
+                }
+                else if (output.Contains("Sync Command Completed", StringComparison.OrdinalIgnoreCase))
+                {
+                    commandIncomplete = false;
+                    SettingStateToNormal();
+                    EditorCoroutineUtility.StartCoroutineOwnerless(DelayedExecution(1f));
+                }
+                else if (output.Contains("Status Command Completed", StringComparison.OrdinalIgnoreCase))
+                {
+                    AnchorpointLogger.Log("Status Command Complete Called");
+                    HasConflictedFiles();
+                    if (hasConflict)
+                    {
+                        RefreshView();
+                        EditorCoroutineUtility.StartCoroutineOwnerless(DelayedExecution(0f));
                     }
                 }
             };
@@ -1140,8 +1147,8 @@ namespace Anchorpoint.Editor
             revertButton.SetEnabled(false);
             spinnerImg = root.Q<Button>("Spinner");
             spinnerImg.style.display = DisplayStyle.None;
-            processingTextLabel = root.Q<Label>("ProcessingTextLabel"); 
-            processingTextLabel.style.display = DisplayStyle.None;
+            processingTextLabel = root.Q<Label>("ProcessingTextLabel");
+            processingTextLabel.text = commandIncomplete ? cacheProcessingLabel : "";
 
             refreshButton = root.Q<Button>("Refresh");
             loadingImg = root.Q<VisualElement>("LoadingImg");
@@ -1217,9 +1224,9 @@ namespace Anchorpoint.Editor
                 if (IsAnyFileSelected())
                 {
                     inProcess = true;
+                    commandIncomplete = true;
                     AnchorpointEvents.inProgress = true;
                     ChangingUIInProgress(false);
-                    processingTextLabel.style.display = DisplayStyle.Flex;
                     processingTextLabel.text = "Processing changes…";
                     StartSpinnerAnimation();
                     CLIWrapper.Sync(commitMessage, filesToCommit.ToArray());
@@ -1243,9 +1250,9 @@ namespace Anchorpoint.Editor
                 if (IsAnyFileSelected())
                 {
                     inProcess = true;
+                    commandIncomplete = true;
                     AnchorpointEvents.inProgress = true;
                     ChangingUIInProgress(false);
-                    processingTextLabel.style.display = DisplayStyle.Flex;
                     processingTextLabel.text = "Reverting…";
                     StartSpinnerAnimation();
                     CLIWrapper.Revert(filesToRevert.ToArray());
@@ -1365,7 +1372,7 @@ namespace Anchorpoint.Editor
         {
             yield return new EditorWaitForSeconds(delayInSeconds); 
             processingTextLabel.style.color = Color.white;
-            processingTextLabel.style.display = DisplayStyle.None;
+            processingTextLabel.text = "";
         }
         
         private void HasConflictedFiles()

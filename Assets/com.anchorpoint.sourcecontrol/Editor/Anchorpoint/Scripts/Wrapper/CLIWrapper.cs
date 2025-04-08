@@ -19,7 +19,7 @@ namespace Anchorpoint.Wrapper
         private static string Output { get; set; }
 
         private static CommandQueue _commandQueue = new CommandQueue();
-        private static bool isStatusQueuedAfterCommand = false;  // Track when Status should be queued
+        public static bool isStatusQueuedAfterCommand = false;  // Track when Status should be queued
         private static bool isRefreshing = false;                // Flag for refresh control
         private static readonly Queue<Action> refreshQueue = new Queue<Action>();  // Queue to manage refresh actions
         
@@ -224,14 +224,6 @@ namespace Anchorpoint.Wrapper
                             AnchorpointLogger.Log($"Output: {e.Data}");
                             AnchorpointEvents.RaiseCommandOutputReceived($"{e.Data}");
                             AddOutput($"\n\nOutput:\n{e.Data}");
-                            
-                            if (e.Data.Contains("Pushing git changes", StringComparison.OrdinalIgnoreCase))
-                            {
-                                AnchorpointLogger.LogWarning("Pushing git changes");
-                                isStatusQueuedAfterCommand = false;
-                                AnchorpointEvents.inProgress = false;
-                                Status();
-                            }
                         }
                     };
                     process.BeginErrorReadLine();
