@@ -228,8 +228,8 @@ namespace Anchorpoint.Wrapper
                             if (e.Data.Contains("Pushing git changes", StringComparison.OrdinalIgnoreCase))
                             {
                                 AnchorpointLogger.LogWarning("Pushing git changes");
-                                isStatusQueuedAfterCommand = false;
-                                AnchorpointEvents.inProgress = false;
+                                isStatusQueuedAfterCommand = false; 
+                                //AnchorpointEvents.inProgress = false; //if this is not called, then the progress is shown correctly but the refresh of the UI is missing. We want the correct progress AND the refresh of the UI                             
                                 Status();
                             }
                         }
