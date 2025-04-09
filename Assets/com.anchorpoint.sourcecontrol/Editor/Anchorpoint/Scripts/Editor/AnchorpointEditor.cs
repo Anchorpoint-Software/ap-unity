@@ -994,10 +994,6 @@ namespace Anchorpoint.Editor
                     {
                         processingTextLabel.text = string.IsNullOrEmpty(progressValue) ? "Pushing in the background..." : $"Pushing in the background: {progressValue}%...";
                     }
-                    else if (progressText.Contains("Uploading Files", StringComparison.OrdinalIgnoreCase))
-                    {
-                        processingTextLabel.text = progressText;
-                    }
                     else
                     {
                         processingTextLabel.text = progressText;
