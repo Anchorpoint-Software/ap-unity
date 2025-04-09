@@ -129,6 +129,8 @@ namespace Anchorpoint.Wrapper
         private static void HandleConnectMessage(ConnectMessage message)
         {
             FetchCurrentUser();
+            AnchorpointLogger.LogWarning($"Message type {message.type}");
+            
             switch (message.type)
             {
                 case "files locked":
@@ -136,6 +138,7 @@ namespace Anchorpoint.Wrapper
                 case "files unlocked":
                     break;
                 case "files outdated":
+                    CLIWrapper.Status();
                     break;
                 case "files updated":
                     CLIWrapper.Status();    //  There is a conflict so run the Status command
