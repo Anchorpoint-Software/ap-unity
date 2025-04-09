@@ -77,6 +77,7 @@ namespace Anchorpoint.Editor
         private bool hasConflict = false;      // Flag to check is if some conflict
         private bool hasMetaFile = false;       // Flag to check if there is meta file in changed files
         private bool commandIncomplete = false;     // Flag to check if the command has run completely.
+        private bool hasError = false;
         
         // Spinner wheel animation things
         private List<Texture2D> gifFrames = new List<Texture2D>();
@@ -952,25 +953,26 @@ namespace Anchorpoint.Editor
         {
             AnchorpointLogger.LogError(output);
             //prevent certain CLI outputs from being shown in the processing label
-            string[] ignoredOutputs = new string[] {"UserList", "Output:" };
-            if(ignoredOutputs.Any(ignored => output.Contains(ignored, StringComparison.OrdinalIgnoreCase))){
+            string[] ignoredOutputs = new string[] {"Status Command Completed", "UserList", "Output:" };
+            if(ignoredOutputs.Any(ignored => output.Contains(ignored, StringComparison.OrdinalIgnoreCase)) || hasError){
                 return;
             }
-
+            
             EditorApplication.delayCall += () =>
             {
+               
                 // Handle errors explicitly
                 if (output.Contains("\"error\":"))
                 {
                     AnchorpointLogger.LogError("This condition is met for the error");
                     
-                    string errorMessage = Regex.Match(output, "\"error\"\\s*:\\s*\"([^\"]+)\"").Groups[1].Value;
-                    Debug.LogError($"Error: {errorMessage}");
+                    Debug.LogError($"An issue has occurred. Check the Anchorpoint desktop application for more details.");
                     
-                    processingTextLabel.text = output.Contains("canceled", StringComparison.OrdinalIgnoreCase) ? "Push canceled" : "An issue has occurred. Check the console.";
+                    processingTextLabel.text = output.Contains("canceled", StringComparison.OrdinalIgnoreCase) ? "Push canceled" : "An issue has occurred. Check the Anchorpoint desktop application for more details.";
 
                     
                     processingTextLabel.style.color = Color.red;
+                    hasError = true;
                     EditorCoroutineUtility.StartCoroutineOwnerless(DelayedExecution(textScreenTime));
                     SettingStateToNormal();
                     return;
@@ -1011,6 +1013,7 @@ namespace Anchorpoint.Editor
                 if (output.Equals("Revert Command Completed", StringComparison.OrdinalIgnoreCase))
                 {
                     processingTextLabel.text = "Reverting completed";
+                    EditorCoroutineUtility.StartCoroutineOwnerless(DelayedExecution(textScreenTime));
                     SettingStateToNormal();
                 }
                 else if (output.Contains("Pushing git changes", StringComparison.OrdinalIgnoreCase))
@@ -1024,14 +1027,13 @@ namespace Anchorpoint.Editor
                 else if (output.Contains("successful", StringComparison.OrdinalIgnoreCase))
                 {
                     processingTextLabel.text = "Push successful";
-                    SettingStateToNormal();
                     EditorCoroutineUtility.StartCoroutineOwnerless(DelayedExecution(textScreenTime));
                 }
                 else if (output.Contains("Sync Command Completed", StringComparison.OrdinalIgnoreCase))
                 {
                     commandIncomplete = false;
+                    EditorCoroutineUtility.StartCoroutineOwnerless(DelayedExecution(textScreenTime));
                     SettingStateToNormal();
-                    EditorCoroutineUtility.StartCoroutineOwnerless(DelayedExecution(1f));
                 }
                 else if (output.Contains("Status Command Completed", StringComparison.OrdinalIgnoreCase))
                 {
@@ -1370,7 +1372,8 @@ namespace Anchorpoint.Editor
         {
             yield return new EditorWaitForSeconds(delayInSeconds); 
             processingTextLabel.style.color = Color.white;
-            processingTextLabel.text = "";
+            processingTextLabel.text = "";            
+            hasError = false;
         }
         
         private void HasConflictedFiles()
