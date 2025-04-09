@@ -951,6 +951,11 @@ namespace Anchorpoint.Editor
         private void OnCommandOutputReceived(string output)
         {
             AnchorpointLogger.LogError(output);
+            //prevent certain CLI outputs from being shown in the processing label
+            string[] ignoredOutputs = new string[] {"UserList", "Output:" };
+            if(ignoredOutputs.Any(ignored => output.Contains(ignored, StringComparison.OrdinalIgnoreCase))){
+                return;
+            }
 
             EditorApplication.delayCall += () =>
             {
@@ -974,6 +979,7 @@ namespace Anchorpoint.Editor
                 // Handle progress updates
                 Match progressMatch = Regex.Match(output, "\"progress-text\"\\s*:\\s*\"([^\"]+)\"");
                 Match progressValueMatch = Regex.Match(output, "\"progress-value\"\\s*:\\s*(\\d+)");
+                StartSpinnerAnimation();
                 
                 if (progressMatch.Success)
                 {
@@ -994,7 +1000,7 @@ namespace Anchorpoint.Editor
                     }
                     else
                     {
-                        processingTextLabel.text = $"{progressText}...";
+                        processingTextLabel.text = progressText;
                     }
                 }
                 else
@@ -1003,16 +1009,12 @@ namespace Anchorpoint.Editor
                         .Replace("{\"progress-text\": \"", "")
                         .Replace("}", "")
                         .Trim();
-                    processingTextLabel.text = $"{trimmedOutput}...";
+                    processingTextLabel.text = trimmedOutput;
                 }
 
                 if (output.Equals("Revert Command Completed", StringComparison.OrdinalIgnoreCase))
                 {
                     processingTextLabel.text = "Reverting completed";
-                    SettingStateToNormal();
-                }
-                else if (output.Contains("Talking to Server", StringComparison.OrdinalIgnoreCase))
-                {
                     SettingStateToNormal();
                 }
                 else if (output.Contains("Pushing git changes", StringComparison.OrdinalIgnoreCase))
