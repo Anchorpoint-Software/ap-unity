@@ -960,89 +960,107 @@ namespace Anchorpoint.Editor
             
             EditorApplication.delayCall += () =>
             {
-               
-                // Handle errors explicitly
-                if (output.Contains("\"error\":"))
+                if (commandIncomplete)
                 {
-                    AnchorpointLogger.LogError("This condition is met for the error");
-                    
-                    Debug.LogError($"An issue has occurred. Check the Anchorpoint desktop application for more details.");
-                    
-                    processingTextLabel.text = output.Contains("canceled", StringComparison.OrdinalIgnoreCase) ? "Push canceled" : "An issue has occurred. Check the Anchorpoint desktop application for more details.";
-
-                    
-                    processingTextLabel.style.color = Color.red;
-                    hasError = true;
-                    EditorCoroutineUtility.StartCoroutineOwnerless(DelayedExecution(textScreenTime));
-                    SettingStateToNormal();
-                    return;
-                }
-
-                // Handle progress updates
-                Match progressMatch = Regex.Match(output, "\"progress-text\"\\s*:\\s*\"([^\"]+)\"");
-                Match progressValueMatch = Regex.Match(output, "\"progress-value\"\\s*:\\s*(\\d+)");
-                StartSpinnerAnimation();
-                
-                if (progressMatch.Success)
-                {
-                    string progressText = progressMatch.Groups[1].Value;
-                    string progressValue = progressValueMatch.Success ? progressValueMatch.Groups[1].Value : "";
-
-                    if (progressText.Contains("Staging files", StringComparison.OrdinalIgnoreCase))
+                    // Handle errors explicitly
+                    if (output.Contains("\"error\":"))
                     {
-                        processingTextLabel.text = string.IsNullOrEmpty(progressValue) ? "Staging files..." : $"Staging files: {progressValue}%...";
+                        AnchorpointLogger.LogError("This condition is met for the error");
+                        
+                        Debug.LogError($"An issue has occurred. Check the Anchorpoint desktop application for more details.");
+
+                        processingTextLabel.text = output.Contains("canceled", StringComparison.OrdinalIgnoreCase)
+                            ? "Push canceled"
+                            : "An issue has occurred. Check the Anchorpoint desktop application for more details.";
+
+
+                        processingTextLabel.style.color = Color.red;
+                        hasError = true;
+                        EditorCoroutineUtility.StartCoroutineOwnerless(DelayedExecution(textScreenTime));
+                        SettingStateToNormal();
+                        return;
                     }
-                    else if (progressText.Contains("Pushing git changes", StringComparison.OrdinalIgnoreCase))
+
+                    // Handle progress updates
+                    Match progressMatch = Regex.Match(output, "\"progress-text\"\\s*:\\s*\"([^\"]+)\"");
+                    Match progressValueMatch = Regex.Match(output, "\"progress-value\"\\s*:\\s*(\\d+)");
+                    StartSpinnerAnimation();
+
+                    if (progressMatch.Success)
                     {
-                        processingTextLabel.text = string.IsNullOrEmpty(progressValue) ? "Pushing in the background..." : $"Pushing in the background: {progressValue}%...";
+                        string progressText = progressMatch.Groups[1].Value;
+                        string progressValue = progressValueMatch.Success ? progressValueMatch.Groups[1].Value : "";
+
+                        if (progressText.Contains("Staging files", StringComparison.OrdinalIgnoreCase))
+                        {
+                            processingTextLabel.text = string.IsNullOrEmpty(progressValue)
+                                ? "Staging files..."
+                                : $"Staging files: {progressValue}%...";
+                        }
+                        else if (progressText.Contains("Pushing git changes", StringComparison.OrdinalIgnoreCase))
+                        {
+                            processingTextLabel.text = string.IsNullOrEmpty(progressValue)
+                                ? "Pushing in the background..."
+                                : $"Pushing in the background: {progressValue}%...";
+                        }
+                        else
+                        {
+                            processingTextLabel.text = progressText;
+                        }
                     }
                     else
                     {
-                        processingTextLabel.text = progressText;
+                        string trimmedOutput = output.Split('.')[0]
+                            .Replace("{\"progress-text\": \"", "")
+                            .Replace("}", "")
+                            .Trim();
+                        processingTextLabel.text = trimmedOutput;
                     }
-                }
-                else
-                {
-                    string trimmedOutput = output.Split('.')[0]
-                        .Replace("{\"progress-text\": \"", "")
-                        .Replace("}", "")
-                        .Trim();
-                    processingTextLabel.text = trimmedOutput;
-                }
 
-                if (output.Equals("Revert Command Completed", StringComparison.OrdinalIgnoreCase))
-                {
-                    processingTextLabel.text = "Reverting completed";
-                    EditorCoroutineUtility.StartCoroutineOwnerless(DelayedExecution(textScreenTime));
-                    SettingStateToNormal();
-                }
-                else if (output.Contains("Pushing git changes", StringComparison.OrdinalIgnoreCase))
-                {
-                    cacheProcessingLabel = processingTextLabel.text;
-                    AnchorpointLogger.LogWarning("Pushing git changes");
-                    CLIWrapper.isStatusQueuedAfterCommand = false;
-                    AnchorpointEvents.inProgress = false;
-                    CLIWrapper.Status();
-                }
-                else if (output.Contains("successful", StringComparison.OrdinalIgnoreCase))
-                {
-                    processingTextLabel.text = "Push successful";
-                    EditorCoroutineUtility.StartCoroutineOwnerless(DelayedExecution(textScreenTime));
-                }
-                else if (output.Contains("Sync Command Completed", StringComparison.OrdinalIgnoreCase))
-                {
-                    commandIncomplete = false;
-                    EditorCoroutineUtility.StartCoroutineOwnerless(DelayedExecution(textScreenTime));
-                    SettingStateToNormal();
-                }
-                else if (output.Contains("Status Command Completed", StringComparison.OrdinalIgnoreCase))
-                {
-                    AnchorpointLogger.Log("Status Command Complete Called");
-                    HasConflictedFiles();
-                    if (hasConflict)
+                    if (output.Equals("Revert Command Completed", StringComparison.OrdinalIgnoreCase))
                     {
-                        RefreshView();
-                        EditorCoroutineUtility.StartCoroutineOwnerless(DelayedExecution(0f));
+                        processingTextLabel.text = "Reverting completed";
+                        commandIncomplete = false;
+                        cacheProcessingLabel = "";
+                        SettingStateToNormal();
+                        StopSpinnerAnimation();
+                    }
+                    else if (output.Contains("Talking to Server", StringComparison.OrdinalIgnoreCase))
+                    {
+                        StartSpinnerAnimation();
+                        SettingStateToNormal();
+                    }
+                    else if (output.Contains("Pushing git changes", StringComparison.OrdinalIgnoreCase))
+                    {
+                        cacheProcessingLabel = processingTextLabel.text;
+                        AnchorpointLogger.LogWarning("Pushing git changes");
+                        CLIWrapper.isStatusQueuedAfterCommand = false;
+                        AnchorpointEvents.inProgress = false;
+                        CLIWrapper.Status();
+                    }
+                    else if (output.Contains("successful", StringComparison.OrdinalIgnoreCase))
+                    {
+                        processingTextLabel.text = "Push successful";
+                        SettingStateToNormal();
+                        EditorCoroutineUtility.StartCoroutineOwnerless(DelayedExecution(textScreenTime));
+                    }
+                    else if (output.Contains("Sync Command Completed", StringComparison.OrdinalIgnoreCase))
+                    {
+                        StopSpinnerAnimation();
+                        commandIncomplete = false;
+                        cacheProcessingLabel = "";
+                        SettingStateToNormal();
+                        EditorCoroutineUtility.StartCoroutineOwnerless(DelayedExecution(textScreenTime));
+                    }
+                    else if (output.Contains("Status Command Completed", StringComparison.OrdinalIgnoreCase))
+                    {
+                        AnchorpointLogger.Log("Status Command Complete Called");
+                        HasConflictedFiles();
+                        if (hasConflict)
+                        {
+                            RefreshView();
+                            EditorCoroutineUtility.StartCoroutineOwnerless(DelayedExecution(0f));
+                        }
                     }
                 }
             };
@@ -1056,7 +1074,6 @@ namespace Anchorpoint.Editor
             commitButton.SetEnabled(false);
             revertButton.SetEnabled(false);
             OnRevertComplete();
-            StopSpinnerAnimation();
         }
 
         private void OnRevertComplete()
