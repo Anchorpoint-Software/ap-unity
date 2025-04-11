@@ -145,14 +145,10 @@ namespace Anchorpoint.Editor
                 ShowNoProjectError();
             }
             else if (PluginInitializer.IsInitialized && PluginInitializer.IsConnected)
-            {
-                if (commandIncomplete)
-                {
-                    processingTextLabel.text = cacheProcessingLabel;
-                    StartSpinnerAnimation();
-                }
+            {                
                 ShowConnectedWindow();
-                HasConflictedFiles();
+                CheckConflictedFiles();                
+                showCachedProcessingLabel();
             }
             else if (PluginInitializer.IsPlaymode && PluginInitializer.WasConnected)
             {
@@ -161,6 +157,15 @@ namespace Anchorpoint.Editor
             else
             {
                 ShowConnectWindow();
+                showCachedProcessingLabel();
+            }
+        }
+
+        private void showCachedProcessingLabel(){
+            if (commandIncomplete)
+            {
+                processingTextLabel.text = cacheProcessingLabel;
+                StartSpinnerAnimation();
             }
         }
 
@@ -952,14 +957,15 @@ namespace Anchorpoint.Editor
         private void OnCommandOutputReceived(string output)
         {
             AnchorpointLogger.LogError(output);
-            //prevent certain CLI outputs from being shown in the processing label
-            string[] ignoredOutputs = new string[] {"UserList", "Output:" };
-            if(ignoredOutputs.Any(ignored => output.Contains(ignored, StringComparison.OrdinalIgnoreCase)) || hasError){
-                return;
-            }
             
             EditorApplication.delayCall += () =>
             {
+
+                //prevent certain CLI outputs from being shown in the processing label
+                string[] ignoredOutputs = new string[] {"UserList", "Output:" };
+                if(ignoredOutputs.Any(ignored => output.Contains(ignored, StringComparison.OrdinalIgnoreCase)) || hasError){
+                    return;
+                }
                 
                 Debug.Log(output);
                 // Handle errors explicitly
@@ -976,46 +982,17 @@ namespace Anchorpoint.Editor
 
                     processingTextLabel.style.color = Color.red;
                     hasError = true;
-                    EditorCoroutineUtility.StartCoroutineOwnerless(DelayedExecution(textScreenTime));
+                    commandIncomplete = false;
                     SettingStateToNormal();
+                    StopSpinnerAnimation();
+                    EditorCoroutineUtility.StartCoroutineOwnerless(DelayedExecution(textScreenTime));
                     return;
                 }
 
-                // Handle progress updates
-                Match progressMatch = Regex.Match(output, "\"progress-text\"\\s*:\\s*\"([^\"]+)\"");
-                Match progressValueMatch = Regex.Match(output, "\"progress-value\"\\s*:\\s*(\\d+)");
                 StartSpinnerAnimation();
-
-                /*
-                if (progressMatch.Success)
-                {
-                    string progressText = progressMatch.Groups[1].Value;
-                    string progressValue = progressValueMatch.Success ? progressValueMatch.Groups[1].Value : "";
-                    
-                        //Debug.Log("progress text bla: "+progressText);
-
-                    if (progressText.Contains("Staging files", StringComparison.OrdinalIgnoreCase))
-                    {
-                        processingTextLabel.text = string.IsNullOrEmpty(progressValue)
-                            ? "Staging files..."
-                            : $"Staging files: {progressValue}%...";
-                    }
-                    else if (progressText.Contains("Pushing git changes", StringComparison.OrdinalIgnoreCase))
-                    {
-                        cacheProcessingLabel = processingTextLabel.text;
-                        AnchorpointLogger.LogWarning("Pushing git changes");
-                        CLIWrapper.isStatusQueuedAfterCommand = false;
-                        AnchorpointEvents.inProgress = false;
-                        CLIWrapper.Status();
-                    }
-                    else
-                    {
-                        processingTextLabel.text = progressText;
-                    }
-                }
-                */
                 if (output.Contains("Pushing git changes", StringComparison.OrdinalIgnoreCase)){
-                    processingTextLabel.text = "Preparing to push in the background...";
+                    cacheProcessingLabel = "Pushing in the background...";
+                    processingTextLabel.text = cacheProcessingLabel;
                     AnchorpointLogger.LogWarning("Pushing git changes");
                     CLIWrapper.isStatusQueuedAfterCommand = false;
                     AnchorpointEvents.inProgress = false;
@@ -1023,7 +1000,8 @@ namespace Anchorpoint.Editor
                 }                
                 else if (output.Contains("Talking to Server", StringComparison.OrdinalIgnoreCase))
                 {
-                    processingTextLabel.text = "Talking to Server";
+                    cacheProcessingLabel = "Talking to Server";
+                    processingTextLabel.text = cacheProcessingLabel;
                     StartSpinnerAnimation();
                     SettingStateToNormal();
                 }      
@@ -1031,30 +1009,32 @@ namespace Anchorpoint.Editor
                 else if (output.Contains("Status Command Completed", StringComparison.OrdinalIgnoreCase))
                 {                    
                     if(commandIncomplete){
-                        processingTextLabel.text = "Starting push in the background...";
+                        processingTextLabel.text = cacheProcessingLabel;
                     }else{
                         processingTextLabel.text = "";
                         StopSpinnerAnimation();
                     }
                     AnchorpointLogger.Log("Status Command Complete Called");
-                    HasConflictedFiles();
-                    if (hasConflict)
-                    {
-                        RefreshView();
-                        EditorCoroutineUtility.StartCoroutineOwnerless(DelayedExecution(0f));
-                    }
+
+                    //CheckConflictedFiles();                    
+                    RefreshView();
+                    EditorCoroutineUtility.StartCoroutineOwnerless(DelayedExecution(textScreenTime));
                 }  
                 
                 else if (output.Contains("Revert Command Completed", StringComparison.OrdinalIgnoreCase))
                 {
+                    processingTextLabel.style.color = Color.green;
                     processingTextLabel.text = "Reverting completed";
                     commandIncomplete = false;
                     SettingStateToNormal();
                     StopSpinnerAnimation();
+                    CLIWrapper.Status();
+                    EditorCoroutineUtility.StartCoroutineOwnerless(DelayedExecution(textScreenTime));
                 }
                 else if (output.Contains("Sync Command Completed", StringComparison.OrdinalIgnoreCase))
                 {
                     commandIncomplete = false;
+                    processingTextLabel.style.color = Color.green;
                     processingTextLabel.text = "Syncing completed";
                     SettingStateToNormal();
                     StopSpinnerAnimation();
@@ -1078,15 +1058,6 @@ namespace Anchorpoint.Editor
             ChangingUIInProgress(true);
             commitButton.SetEnabled(false);
             revertButton.SetEnabled(false);
-            OnRevertComplete();
-        }
-
-        private void OnRevertComplete()
-        {
-            if (revertButton != null)
-            {
-                revertButton.text = "Revert";
-            }
         }
         
         private void Update()
@@ -1398,7 +1369,7 @@ namespace Anchorpoint.Editor
             hasError = false;
         }
         
-        private void HasConflictedFiles()
+        private void CheckConflictedFiles()
         {
             CLIStatus status = DataManager.GetStatus();
             
@@ -1407,21 +1378,23 @@ namespace Anchorpoint.Editor
                 return;
             }
 
+            hasConflict = false;
+
             // Check staged files for conflicts
             if (status.Staged != null)
             {
                 foreach (var fileStatus in status.Staged.Values)
                 {
-                    hasConflict = fileStatus == "C";
+                    if(fileStatus == "C") hasConflict = true;
                 }
             }
 
             // Check not staged files for conflicts
-            if (status.NotStaged != null)
+            if (status.NotStaged != null && !hasConflict)
             {
                 foreach (var fileStatus in status.NotStaged.Values)
                 {
-                    hasConflict = fileStatus == "C";
+                    if(fileStatus == "C") hasConflict = true;
                 }
             }
             
@@ -1438,7 +1411,6 @@ namespace Anchorpoint.Editor
             }
             else
             {
-                hasConflict = false;
                 SettingStateToNormal();
             }
         }
