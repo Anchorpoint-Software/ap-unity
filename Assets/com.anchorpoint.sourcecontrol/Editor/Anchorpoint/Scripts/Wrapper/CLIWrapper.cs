@@ -288,7 +288,10 @@ namespace Anchorpoint.Wrapper
 
             // Dequeue and run the next refresh action
             var nextRefresh = refreshQueue.Dequeue();
-            nextRefresh.Invoke();
+            if (nextRefresh != null)
+            {
+                nextRefresh.Invoke();
+            }
 
             // Set a delay before allowing the next refresh to be processed
             EditorApplication.delayCall += () =>
