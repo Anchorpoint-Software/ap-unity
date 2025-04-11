@@ -953,84 +953,54 @@ namespace Anchorpoint.Editor
         {
             AnchorpointLogger.LogError(output);
             //prevent certain CLI outputs from being shown in the processing label
-            string[] ignoredOutputs = new string[] {"Status Command Completed", "UserList", "Output:" };
+            string[] ignoredOutputs = new string[] {"UserList", "Output:" };
             if(ignoredOutputs.Any(ignored => output.Contains(ignored, StringComparison.OrdinalIgnoreCase)) || hasError){
                 return;
             }
             
             EditorApplication.delayCall += () =>
             {
-                if (commandIncomplete)
+                
+                Debug.Log(output);
+                // Handle errors explicitly
+                if (output.Contains("\"error\":"))
                 {
-                    // Handle errors explicitly
-                    if (output.Contains("\"error\":"))
+                    AnchorpointLogger.LogError("This condition is met for the error");
+                    
+                    Debug.LogError($"An issue has occurred. Check the Anchorpoint desktop application for more details.");
+
+                    processingTextLabel.text = output.Contains("canceled", StringComparison.OrdinalIgnoreCase)
+                        ? "Push canceled"
+                        : "An issue has occurred. Check the Anchorpoint desktop application for more details.";
+
+
+                    processingTextLabel.style.color = Color.red;
+                    hasError = true;
+                    EditorCoroutineUtility.StartCoroutineOwnerless(DelayedExecution(textScreenTime));
+                    SettingStateToNormal();
+                    return;
+                }
+
+                // Handle progress updates
+                Match progressMatch = Regex.Match(output, "\"progress-text\"\\s*:\\s*\"([^\"]+)\"");
+                Match progressValueMatch = Regex.Match(output, "\"progress-value\"\\s*:\\s*(\\d+)");
+                StartSpinnerAnimation();
+
+                /*
+                if (progressMatch.Success)
+                {
+                    string progressText = progressMatch.Groups[1].Value;
+                    string progressValue = progressValueMatch.Success ? progressValueMatch.Groups[1].Value : "";
+                    
+                        //Debug.Log("progress text bla: "+progressText);
+
+                    if (progressText.Contains("Staging files", StringComparison.OrdinalIgnoreCase))
                     {
-                        AnchorpointLogger.LogError("This condition is met for the error");
-                        
-                        Debug.LogError($"An issue has occurred. Check the Anchorpoint desktop application for more details.");
-
-                        processingTextLabel.text = output.Contains("canceled", StringComparison.OrdinalIgnoreCase)
-                            ? "Push canceled"
-                            : "An issue has occurred. Check the Anchorpoint desktop application for more details.";
-
-
-                        processingTextLabel.style.color = Color.red;
-                        hasError = true;
-                        EditorCoroutineUtility.StartCoroutineOwnerless(DelayedExecution(textScreenTime));
-                        SettingStateToNormal();
-                        return;
+                        processingTextLabel.text = string.IsNullOrEmpty(progressValue)
+                            ? "Staging files..."
+                            : $"Staging files: {progressValue}%...";
                     }
-
-                    // Handle progress updates
-                    Match progressMatch = Regex.Match(output, "\"progress-text\"\\s*:\\s*\"([^\"]+)\"");
-                    Match progressValueMatch = Regex.Match(output, "\"progress-value\"\\s*:\\s*(\\d+)");
-                    StartSpinnerAnimation();
-
-                    if (progressMatch.Success)
-                    {
-                        string progressText = progressMatch.Groups[1].Value;
-                        string progressValue = progressValueMatch.Success ? progressValueMatch.Groups[1].Value : "";
-
-                        if (progressText.Contains("Staging files", StringComparison.OrdinalIgnoreCase))
-                        {
-                            processingTextLabel.text = string.IsNullOrEmpty(progressValue)
-                                ? "Staging files..."
-                                : $"Staging files: {progressValue}%...";
-                        }
-                        else if (progressText.Contains("Pushing git changes", StringComparison.OrdinalIgnoreCase))
-                        {
-                            processingTextLabel.text = string.IsNullOrEmpty(progressValue)
-                                ? "Pushing in the background..."
-                                : $"Pushing in the background: {progressValue}%...";
-                        }
-                        else
-                        {
-                            processingTextLabel.text = progressText;
-                        }
-                    }
-                    else
-                    {
-                        string trimmedOutput = output.Split('.')[0]
-                            .Replace("{\"progress-text\": \"", "")
-                            .Replace("}", "")
-                            .Trim();
-                        processingTextLabel.text = trimmedOutput;
-                    }
-
-                    if (output.Equals("Revert Command Completed", StringComparison.OrdinalIgnoreCase))
-                    {
-                        processingTextLabel.text = "Reverting completed";
-                        commandIncomplete = false;
-                        cacheProcessingLabel = "";
-                        SettingStateToNormal();
-                        StopSpinnerAnimation();
-                    }
-                    else if (output.Contains("Talking to Server", StringComparison.OrdinalIgnoreCase))
-                    {
-                        StartSpinnerAnimation();
-                        SettingStateToNormal();
-                    }
-                    else if (output.Contains("Pushing git changes", StringComparison.OrdinalIgnoreCase))
+                    else if (progressText.Contains("Pushing git changes", StringComparison.OrdinalIgnoreCase))
                     {
                         cacheProcessingLabel = processingTextLabel.text;
                         AnchorpointLogger.LogWarning("Pushing git changes");
@@ -1038,31 +1008,66 @@ namespace Anchorpoint.Editor
                         AnchorpointEvents.inProgress = false;
                         CLIWrapper.Status();
                     }
-                    else if (output.Contains("successful", StringComparison.OrdinalIgnoreCase))
+                    else
                     {
-                        processingTextLabel.text = "Push successful";
-                        SettingStateToNormal();
-                        EditorCoroutineUtility.StartCoroutineOwnerless(DelayedExecution(textScreenTime));
-                    }
-                    else if (output.Contains("Sync Command Completed", StringComparison.OrdinalIgnoreCase))
-                    {
-                        StopSpinnerAnimation();
-                        commandIncomplete = false;
-                        cacheProcessingLabel = "";
-                        SettingStateToNormal();
-                        EditorCoroutineUtility.StartCoroutineOwnerless(DelayedExecution(textScreenTime));
-                    }
-                    else if (output.Contains("Status Command Completed", StringComparison.OrdinalIgnoreCase))
-                    {
-                        AnchorpointLogger.Log("Status Command Complete Called");
-                        HasConflictedFiles();
-                        if (hasConflict)
-                        {
-                            RefreshView();
-                            EditorCoroutineUtility.StartCoroutineOwnerless(DelayedExecution(0f));
-                        }
+                        processingTextLabel.text = progressText;
                     }
                 }
+                */
+                if (output.Contains("Pushing git changes", StringComparison.OrdinalIgnoreCase)){
+                    processingTextLabel.text = "Preparing to push in the background...";
+                    AnchorpointLogger.LogWarning("Pushing git changes");
+                    CLIWrapper.isStatusQueuedAfterCommand = false;
+                    AnchorpointEvents.inProgress = false;
+                    CLIWrapper.Status();
+                }                
+                else if (output.Contains("Talking to Server", StringComparison.OrdinalIgnoreCase))
+                {
+                    processingTextLabel.text = "Talking to Server";
+                    StartSpinnerAnimation();
+                    SettingStateToNormal();
+                }      
+                
+                else if (output.Contains("Status Command Completed", StringComparison.OrdinalIgnoreCase))
+                {                    
+                    if(commandIncomplete){
+                        processingTextLabel.text = "Starting push in the background...";
+                    }else{
+                        processingTextLabel.text = "";
+                        StopSpinnerAnimation();
+                    }
+                    AnchorpointLogger.Log("Status Command Complete Called");
+                    HasConflictedFiles();
+                    if (hasConflict)
+                    {
+                        RefreshView();
+                        EditorCoroutineUtility.StartCoroutineOwnerless(DelayedExecution(0f));
+                    }
+                }  
+                
+                else if (output.Contains("Revert Command Completed", StringComparison.OrdinalIgnoreCase))
+                {
+                    processingTextLabel.text = "Reverting completed";
+                    commandIncomplete = false;
+                    SettingStateToNormal();
+                    StopSpinnerAnimation();
+                }
+                else if (output.Contains("Sync Command Completed", StringComparison.OrdinalIgnoreCase))
+                {
+                    commandIncomplete = false;
+                    processingTextLabel.text = "Syncing completed";
+                    SettingStateToNormal();
+                    StopSpinnerAnimation();
+                    EditorCoroutineUtility.StartCoroutineOwnerless(DelayedExecution(textScreenTime));
+                }
+                else
+                {         
+                    string trimmedOutput = output.Split('.')[0]
+                        .Replace("{\"progress-text\": \"", "")
+                        .Replace("}", "")
+                        .Trim();
+                    processingTextLabel.text = trimmedOutput;
+                }  
             };
         }
 
