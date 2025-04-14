@@ -28,11 +28,9 @@ The plugin is compatible with the latest Unity 2022 LTS and above. Unity 2021 is
 To enable or disable detailed logs from the plugin, use the global logger flag. It helps in debugging or silent operation based on your development needs:
 
 <pre lang="markdown">
-```csharp
 // Enable or disable logging
 AnchorpointLogger.IsEnabled = true; // Enable logging
 AnchorpointLogger.IsEnabled = false; // Disable logging
-```
 </pre>
 
 All critical steps like CLI communication, status refresh, command execution, and UI state changes are logged when enabled.
