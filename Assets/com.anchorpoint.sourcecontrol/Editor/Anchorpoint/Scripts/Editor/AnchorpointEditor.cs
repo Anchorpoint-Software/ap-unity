@@ -14,6 +14,7 @@ using UnityEngine;
 using UnityEngine.UIElements;
 using Unity.EditorCoroutines.Editor;
 
+
 namespace Anchorpoint.Editor
 {
     public static class EditorColors
@@ -173,7 +174,7 @@ namespace Anchorpoint.Editor
         private void showCachedProcessingLabel(){
             if (commandIncomplete)
             {
-                processingTextLabel.text = cacheProcessingLabel;
+                processingTextLabel.text = string.IsNullOrEmpty(cacheProcessingLabel) ? "Processing..." : cacheProcessingLabel;
                 StartSpinnerAnimation();
             }
         }
@@ -1036,7 +1037,7 @@ namespace Anchorpoint.Editor
                     commandIncomplete = false;
                     SettingStateToNormal();
                     StopSpinnerAnimation();
-                    CLIWrapper.Status();
+                    EditorCoroutineUtility.StartCoroutineOwnerless(DelayedStatus(textScreenTime-2f));
                     EditorCoroutineUtility.StartCoroutineOwnerless(DelayedExecution(textScreenTime));
                 }
                 else if (output.Contains("Sync Command Completed", StringComparison.OrdinalIgnoreCase))
@@ -1049,7 +1050,7 @@ namespace Anchorpoint.Editor
                     EditorCoroutineUtility.StartCoroutineOwnerless(DelayedExecution(textScreenTime));
                 }
                 else
-                {         
+                {        
                     string trimmedOutput = output.Split('.')[0]
                         .Replace("{\"progress-text\": \"", "")
                         .Replace("}", "")
@@ -1393,6 +1394,11 @@ namespace Anchorpoint.Editor
             processingTextLabel.style.color = Color.white;
             processingTextLabel.text = "";            
             hasError = false;
+        }
+        IEnumerator DelayedStatus(float delayInSeconds)
+        {
+            yield return new EditorWaitForSeconds(delayInSeconds);
+            CLIWrapper.Status();
         }
         
         private void CheckConflictedFiles()
