@@ -287,13 +287,13 @@ namespace Anchorpoint.Editor
                 switch (itemData.Status)
                 {
                     case "A":  // Added files
-                        nameLabel.style.color = new StyleColor(Color.green);
+                        nameLabel.style.color = new StyleColor(new Color(0.573f, 0.839f, 0.349f)); // #92d659
                         break;
                     case "M":  // Modified files
-                        nameLabel.style.color = new StyleColor(Color.yellow);
+                        nameLabel.style.color = new StyleColor(new Color(0.957f, 0.737f, 0.008f)); // #F4BC02
                         break;
                     case "D":  // Deleted files
-                        nameLabel.style.color = new StyleColor(Color.red);
+                        nameLabel.style.color = new StyleColor(new Color(1f, 0.325f, 0.29f)); // #FF534A
                         break;
                     default:
                         nameLabel.style.color = new StyleColor(Color.white);
@@ -1146,7 +1146,7 @@ namespace Anchorpoint.Editor
 
             refreshButton = root.Q<Button>("Refresh");
             refreshButtonIcon = root.Q<VisualElement>("RefreshImg");
-            refreshButtonIcon.style.unityBackgroundImageTintColor = PluginInitializer.IsProjectOpen ? new Color(1, 1, 1) : new Color(1f, 0.756f, 0.027f);  // #ffffff when open, #ffc107 when not
+            refreshButtonIcon.style.unityBackgroundImageTintColor = PluginInitializer.IsProjectOpen ? new Color(1, 1, 1) : new Color(0.957f, 0.737f, 0.008f);  // #ffffff when open, #ffc107 when not 
 
             loadingImg = root.Q<VisualElement>("LoadingImg");
             refreshImg = root.Q<VisualElement>("RefreshImg");
