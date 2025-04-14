@@ -3,18 +3,39 @@
 This plugin allows you to commit files and view status and locked files directly from the Unity editor. You must have the Anchorpoint desktop application installed and an active project. For best performance, keep the Anchorpoint project open in the background so that the Unity plugin can detect file changes more quickly.
 
 ## Features
-- Commit and revert added, modified or deleted file changes from within Unity
-- View file status such as modified, added, obsolete and locked in the project window
-- Open Anchorpoint from within a file in Unity to either view the history of the individual file or lock it manually
+- 📂 Visual file tree with checkboxes for staging files and folders
+- 📝 Commit and Revert buttons directly inside Unity
+- 🛠️ Automatic handling of `.meta` files
+- 🔍 Git status tracking and real-time UI updates
+- ⚠️ Conflict detection with resolution prompts
+- 💬 Error handling and display using CLI feedback
+- 🔒 Integration with file locking (prevents editing locked files)
+- 🔁 Automatic CLI status polling and reconnect support
 
-## Basic usage
+## Getting Started
+1. Import the package from the asset store [Link](https://assetstore.unity.com/?srsltid=AfmBOoqEUozEFSxiGAGbgA-8mVN3LNLWgadtA0uAD-s0MG5VEZuFFxFW) or simply download this repo and import it as Unity package.
+2. Go to Window > Anchorpoint to open the plugin window.
+3. Click Connect to Anchorpoint to pair with your active Anchorpoint project.
+4. Review changed files and either commit or revert.
 
-Import the URL as a Unity package. Then open the Anchorpoint UI from the Window menu in Unity. You will need to connect to the Anchorpoint desktop application by simply clicking on the button. If you have another Anchorpoint project open, you will need to manually click the Refresh button to see the updated changes. Check the [documentation](https://docs.anchorpoint.app/docs/version-control/first-steps/unity/) for further details.
-
-If you experience problems, it's often helpful to disconnect and reconnect the plugin to Anchorpoint.
+Note: If you switch projects in Anchorpoint, click the Refresh button in Unity to resync.
+Check the [documentation](https://docs.anchorpoint.app/docs/version-control/first-steps/unity/) for further details.
 
 ## Compatibility
 The plugin is compatible with the latest Unity 2022 LTS and above. Unity 2021 is not supported.
+
+## Logger Support
+To enable or disable detailed logs from the plugin, use the global logger flag. It helps in debugging or silent operation based on your development needs:
+
+<pre lang="markdown">
+```csharp
+// Enable or disable logging
+AnchorpointLogger.IsEnabled = true; // Enable logging
+AnchorpointLogger.IsEnabled = false; // Disable logging
+```
+</pre>
+
+All critical steps like CLI communication, status refresh, command execution, and UI state changes are logged when enabled.
 
 ## Contribution
 
