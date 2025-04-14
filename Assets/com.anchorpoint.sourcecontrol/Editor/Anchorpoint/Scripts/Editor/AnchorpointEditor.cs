@@ -35,12 +35,14 @@ namespace Anchorpoint.Editor
         private Label onlyMetafilesDescriptionLabel;
         private Label noticeLable;
         private Label conflictLable;
+        private Label editWarningLabel;
         private Button connectedOpenAnchorpointButton;
         private Button commitButton;
         private Button revertButton;
         private Button allButton;
         private Button noneButton;
-        private Button refreshButton;
+        private Button refreshButton;        
+        private VisualElement refreshButtonIcon;
         private Button disconnectButton;
         private Button helpConnectedWinButton;
         private Button spinnerImg;
@@ -68,7 +70,7 @@ namespace Anchorpoint.Editor
         private const string anchorPointIcon = "d8e0264a1e3a54b09aaf9e7ac62d4e1f";
         private const string helpUrl = "https://docs.anchorpoint.app/docs/version-control/first-steps/unity/";
         private const string noProjectErrorDescription = "This Unity project is not maintained by Anchorpoint. You will need to create a project first.\n\nCheck the documentation for help.";
-        private const string validatingDescription = "Anchorpoint’s desktop application is not available.\n\nCheck the documentation for help.";
+        private const string validatingDescription = "Anchorpoint's desktop application is not available.\n\nCheck the documentation for help.";
         
         // Now count unique files from the merged dictionary
         private HashSet<string> processedFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -1143,6 +1145,9 @@ namespace Anchorpoint.Editor
             processingTextLabel.text = commandIncomplete ? cacheProcessingLabel : "";
 
             refreshButton = root.Q<Button>("Refresh");
+            refreshButtonIcon = root.Q<VisualElement>("RefreshImg");
+            refreshButtonIcon.style.unityBackgroundImageTintColor = PluginInitializer.IsProjectOpen ? new Color(1, 1, 1) : new Color(1f, 0.756f, 0.027f);  // #ffffff when open, #ffc107 when not
+
             loadingImg = root.Q<VisualElement>("LoadingImg");
             refreshImg = root.Q<VisualElement>("RefreshImg");
             
@@ -1193,6 +1198,9 @@ namespace Anchorpoint.Editor
             
             conflictLable = root.Q<Label>("ConflictNotice");
             conflictLable.style.display = DisplayStyle.None;
+            
+            editWarningLabel = root.Q<Label>("EditWarningLabel");
+            editWarningLabel.style.opacity = 0;
             
             // Register callback to track changes in the commit message field
             commitMessageField.RegisterValueChangedCallback(evt =>
@@ -1358,8 +1366,12 @@ namespace Anchorpoint.Editor
             disconnectButton.SetEnabled(flag);
             commitMessageField.SetEnabled(flag);
             commitButton.SetEnabled(flag);
-            revertButton.SetEnabled(flag);            
-            treeView.style.opacity = flag ? 1 : 0.5f;
+            revertButton.SetEnabled(flag);
+            if (inProcess)
+            {
+                editWarningLabel.style.opacity = flag ? 0 : 1;
+            }
+            treeView.style.opacity = flag ? 1 : 0.3f;
             treeView.SetEnabled(flag);
         }
         
