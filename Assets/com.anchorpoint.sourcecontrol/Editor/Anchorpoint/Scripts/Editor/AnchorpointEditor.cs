@@ -967,7 +967,6 @@ namespace Anchorpoint.Editor
                     return;
                 }
                 
-                Debug.Log(output);
                 // Handle errors explicitly
                 if (output.Contains("\"error\":"))
                 {
@@ -1217,6 +1216,7 @@ namespace Anchorpoint.Editor
                 if (IsAnyFileSelected())
                 {
                     inProcess = true;
+                    treeView.SetEnabled(false);
                     commandIncomplete = true;
                     AnchorpointEvents.inProgress = true;
                     ChangingUIInProgress(false);
@@ -1243,6 +1243,7 @@ namespace Anchorpoint.Editor
                 if (IsAnyFileSelected())
                 {
                     inProcess = true;
+                    treeView.SetEnabled(false);
                     commandIncomplete = true;
                     AnchorpointEvents.inProgress = true;
                     ChangingUIInProgress(false);
@@ -1299,7 +1300,11 @@ namespace Anchorpoint.Editor
             refreshImg.style.display = DisplayStyle.None;
             CLIWrapper.Status();
             ChangingUIInProgress(false);
-            ChangingIndRefreshButton(false);
+            ChangingIndRefreshButton(false);   
+            
+            // In case the state is holding previous values (e.g. due to pushing the progress), clear it
+            commandIncomplete = false;
+            cacheProcessingLabel = "";         
         }
 
         private void Disconnect()
@@ -1353,7 +1358,9 @@ namespace Anchorpoint.Editor
             disconnectButton.SetEnabled(flag);
             commitMessageField.SetEnabled(flag);
             commitButton.SetEnabled(flag);
-            revertButton.SetEnabled(flag);
+            revertButton.SetEnabled(flag);            
+            treeView.style.opacity = flag ? 1 : 0.5f;
+            treeView.SetEnabled(flag);
         }
         
         private void ChangingIndRefreshButton(bool flag)
