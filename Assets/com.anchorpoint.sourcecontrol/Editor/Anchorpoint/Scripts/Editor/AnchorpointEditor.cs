@@ -16,6 +16,13 @@ using Unity.EditorCoroutines.Editor;
 
 namespace Anchorpoint.Editor
 {
+    public static class EditorColors
+    {
+        public static readonly Color GREEN = new Color(0.573f, 0.839f, 0.349f);    // #92d659
+        public static readonly Color YELLOW = new Color(0.957f, 0.737f, 0.008f);   // #F4BC02
+        public static readonly Color RED = new Color(1f, 0.325f, 0.29f);           // #FF534A
+    }
+
     public class AnchorpointEditor : EditorWindow
     {
         [SerializeField] private VisualTreeAsset m_VisualTreeAsset = default;
@@ -287,13 +294,13 @@ namespace Anchorpoint.Editor
                 switch (itemData.Status)
                 {
                     case "A":  // Added files
-                        nameLabel.style.color = new StyleColor(new Color(0.573f, 0.839f, 0.349f)); // #92d659
+                        nameLabel.style.color = new StyleColor(EditorColors.GREEN);
                         break;
                     case "M":  // Modified files
-                        nameLabel.style.color = new StyleColor(new Color(0.957f, 0.737f, 0.008f)); // #F4BC02
+                        nameLabel.style.color = new StyleColor(EditorColors.YELLOW);
                         break;
                     case "D":  // Deleted files
-                        nameLabel.style.color = new StyleColor(new Color(1f, 0.325f, 0.29f)); // #FF534A
+                        nameLabel.style.color = new StyleColor(EditorColors.RED);
                         break;
                     default:
                         nameLabel.style.color = new StyleColor(Color.white);
@@ -981,7 +988,7 @@ namespace Anchorpoint.Editor
                         : "An issue has occurred. Check the Anchorpoint desktop application for more details.";
 
 
-                    processingTextLabel.style.color = Color.red;
+                    processingTextLabel.style.color = EditorColors.RED;
                     hasError = true;
                     commandIncomplete = false;
                     SettingStateToNormal();
@@ -1024,7 +1031,7 @@ namespace Anchorpoint.Editor
                 
                 else if (output.Contains("Revert Command Completed", StringComparison.OrdinalIgnoreCase))
                 {
-                    processingTextLabel.style.color = Color.green;
+                    processingTextLabel.style.color = EditorColors.GREEN;
                     processingTextLabel.text = "Reverting completed";
                     commandIncomplete = false;
                     SettingStateToNormal();
@@ -1035,7 +1042,7 @@ namespace Anchorpoint.Editor
                 else if (output.Contains("Sync Command Completed", StringComparison.OrdinalIgnoreCase))
                 {
                     commandIncomplete = false;
-                    processingTextLabel.style.color = Color.green;
+                    processingTextLabel.style.color = EditorColors.GREEN;
                     processingTextLabel.text = "Syncing completed";
                     SettingStateToNormal();
                     StopSpinnerAnimation();
@@ -1146,7 +1153,7 @@ namespace Anchorpoint.Editor
 
             refreshButton = root.Q<Button>("Refresh");
             refreshButtonIcon = root.Q<VisualElement>("RefreshImg");
-            refreshButtonIcon.style.unityBackgroundImageTintColor = PluginInitializer.IsProjectOpen ? new Color(1, 1, 1) : new Color(0.957f, 0.737f, 0.008f);  // #ffffff when open, #ffc107 when not 
+            refreshButtonIcon.style.unityBackgroundImageTintColor = PluginInitializer.IsProjectOpen ? new Color(1, 1, 1) : EditorColors.YELLOW;  // #ffffff when open, yellow when not 
 
             loadingImg = root.Q<VisualElement>("LoadingImg");
             refreshImg = root.Q<VisualElement>("RefreshImg");
