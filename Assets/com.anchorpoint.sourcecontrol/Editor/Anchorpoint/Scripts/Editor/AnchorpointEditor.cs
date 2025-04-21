@@ -3,7 +3,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text.RegularExpressions;
 using Anchorpoint.Constants;
 using Anchorpoint.Events;
 using Anchorpoint.Logger;
@@ -16,13 +15,6 @@ using Unity.EditorCoroutines.Editor;
 
 namespace Anchorpoint.Editor
 {
-    public static class EditorColors
-    {
-        public static readonly Color GREEN = new Color(0.573f, 0.839f, 0.349f);    // #92d659
-        public static readonly Color YELLOW = new Color(0.957f, 0.737f, 0.008f);   // #F4BC02
-        public static readonly Color RED = new Color(1f, 0.325f, 0.29f);           // #FF534A
-    }
-
     public class AnchorpointEditor : EditorWindow
     {
         [SerializeField] private VisualTreeAsset m_VisualTreeAsset = default;
@@ -173,7 +165,7 @@ namespace Anchorpoint.Editor
         private void showCachedProcessingLabel(){
             if (commandIncomplete)
             {
-                processingTextLabel.text = cacheProcessingLabel;
+                processingTextLabel.text = string.IsNullOrEmpty(cacheProcessingLabel) ? "Processing..." : cacheProcessingLabel;
                 StartSpinnerAnimation();
             }
         }
@@ -1036,7 +1028,7 @@ namespace Anchorpoint.Editor
                     commandIncomplete = false;
                     SettingStateToNormal();
                     StopSpinnerAnimation();
-                    CLIWrapper.Status();
+                    EditorCoroutineUtility.StartCoroutineOwnerless(DelayedStatus(textScreenTime-2f));
                     EditorCoroutineUtility.StartCoroutineOwnerless(DelayedExecution(textScreenTime));
                 }
                 else if (output.Contains("Sync Command Completed", StringComparison.OrdinalIgnoreCase))
@@ -1049,7 +1041,7 @@ namespace Anchorpoint.Editor
                     EditorCoroutineUtility.StartCoroutineOwnerless(DelayedExecution(textScreenTime));
                 }
                 else
-                {         
+                {        
                     string trimmedOutput = output.Split('.')[0]
                         .Replace("{\"progress-text\": \"", "")
                         .Replace("}", "")
@@ -1393,6 +1385,11 @@ namespace Anchorpoint.Editor
             processingTextLabel.style.color = Color.white;
             processingTextLabel.text = "";            
             hasError = false;
+        }
+        IEnumerator DelayedStatus(float delayInSeconds)
+        {
+            yield return new EditorWaitForSeconds(delayInSeconds);
+            CLIWrapper.Status();
         }
         
         private void CheckConflictedFiles()
