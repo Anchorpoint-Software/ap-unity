@@ -2,6 +2,10 @@ using UnityEngine;
 
 namespace Anchorpoint.Editor
 {
+    /// <summary>
+    /// A static helper class containing commonly used colors in the Anchorpoint Unity Editor UI.
+    /// These color values are consistent with the UI design guidelines for visual feedback.
+    /// </summary>
     public static class EditorColors
     {
         public static readonly Color GREEN = new Color(0.573f, 0.839f, 0.349f);    // #92d659

@@ -10,7 +10,11 @@ using Anchorpoint.Wrapper;
 
 namespace Anchorpoint.Editor
 {
-
+    /// <summary>
+    /// Handles drawing status icons (e.g., modified, added, locked, outdated) directly in Unity’s Project window
+    /// based on real-time Git data from the Anchorpoint CLI. 
+    /// This includes optimistic updates, conflict detection, lock awareness, and async user avatar support.
+    /// </summary>
     [InitializeOnLoad]
     public class AssetStatusIconDrawer
     {
@@ -31,6 +35,7 @@ namespace Anchorpoint.Editor
 
         static AssetStatusIconDrawer()
         {
+            // Register a handler to draw status icons in the Unity Project window
             EditorApplication.projectWindowItemOnGUI += OnProjectWindowItemOnGUI;
             AnchorpointEvents.OnStatusUpdated += OnStatusUpdated;
 
@@ -40,21 +45,24 @@ namespace Anchorpoint.Editor
 
         private static void OnProjectWindowItemOnGUI(string guid, Rect selectionRect)
         {
+            // Exit if Anchorpoint plugin is not connected
             if (!PluginInitializer.IsConnected)
             {
                 return;
             }
 
+            // Convert GUID to project asset path
             string path = AssetDatabase.GUIDToAssetPath(guid);
             string commitPath = GetCommitPath(path);
 
+            // Update the icon for this asset based on current file status
             IconCache.Icons.TryGetValue(commitPath, out var existingIcon);
 
             // Always fetch and compare the latest icon
             CacheIconForCommitPath(commitPath);
             IconCache.Icons.TryGetValue(commitPath, out var latestIcon);
 
-            // Update icon if it has changed
+            // Only update and repaint if the icon has changed
             if (existingIcon != latestIcon)
             {
                 IconCache.Icons[commitPath] = latestIcon;
@@ -64,6 +72,7 @@ namespace Anchorpoint.Editor
             float bottomPadding = IsOneColumnLayout(selectionRect) ? 0f : 14f;
             float sidePadding = IsOneColumnLayout(selectionRect) ? 8f : 0f;
 
+            // Draw the icon if it exists
             if (latestIcon != null)
             {
                 const float iconSize = 16f;
@@ -80,6 +89,7 @@ namespace Anchorpoint.Editor
 
         private static void CacheIconForCommitPath(string commitPath)
         {
+            // Cache appropriate icon based on file's Git status or lock state
             string status = null;
             if (stagedFiles != null && stagedFiles.TryGetValue(commitPath, out var stagedStatus))
             {
@@ -90,15 +100,18 @@ namespace Anchorpoint.Editor
                 status = notStagedStatus;
             }
 
+            // Conflict status: show conflict icon
             if (status == "C")
             {
                 CacheIcon(commitPath, LoadIcon(conflictIcon));
             }
+            // Outdated file: show outdated or combined icon if also modified
             else if (outdatedFiles != null && outdatedFiles.Contains(commitPath))
             {
                 // File is both outdated and modified
                 CacheIcon(commitPath, status == "M" ? LoadIcon(modifiedOutdatedIcon): LoadIcon(outdatedIcon));
             }
+            // File is locked: show lock or avatar icon
             else if (lockedFiles != null && lockedFiles.TryGetValue(commitPath, out var lockingUserEmail))
             {
                 string currentUserEmail = DataManager.GetCurrentUser()?.Email;
@@ -134,10 +147,12 @@ namespace Anchorpoint.Editor
                     }
                 }
             } 
+            // Modified file: show modified icon
             else if (status == "M")
             {
                 CacheIcon(commitPath, LoadIcon(modifyIcon));
             }
+            // Added file: show added icon
             else if (status == "A")
             {
                 CacheIcon(commitPath, LoadIcon(addIcon));
@@ -176,6 +191,7 @@ namespace Anchorpoint.Editor
         {
             EditorApplication.delayCall += () =>
             {
+                // Refresh internal status caches from CLI status
                 RefreshStatusData();
                 EditorApplication.RepaintProjectWindow();
             };
@@ -192,11 +208,13 @@ namespace Anchorpoint.Editor
                 lockedFiles = status.LockedFiles;
                 outdatedFiles = DataManager.GetOutdatedFiles();
 
+                // Combine all known updated file keys
                 var updatedFiles = new HashSet<string>(stagedFiles.Keys);
                 updatedFiles.UnionWith(notStagedFiles.Keys);
                 updatedFiles.UnionWith((IEnumerable<string>)lockedFiles.Keys ?? new HashSet<string>());
                 updatedFiles.UnionWith(outdatedFiles ?? new HashSet<string>());
                 
+                // Find icons that should be removed from cache
                 var keysToRemove = new List<string>();
 
                 foreach (var key in IconCache.Icons.Keys)
@@ -207,6 +225,7 @@ namespace Anchorpoint.Editor
                     }
                 }
 
+                // Remove outdated icons from cache and reference list
                 foreach (var key in keysToRemove)
                 {
                     if (IconCache.Icons.TryGetValue(key, out var tex))
@@ -229,11 +248,13 @@ namespace Anchorpoint.Editor
 
         private static bool IsOneColumnLayout(Rect selectionRect)
         {
+            // Heuristic to determine layout column mode for UI padding
             return selectionRect.width > 100;
         }
 
         private static string GetCommitPath(string path)
         {
+            // Convert asset path to commit path relative to Anchorpoint working directory
             string projectPath = Directory.GetParent(Application.dataPath).FullName;
             if (string.IsNullOrEmpty(rootRelativePath))
             {
@@ -247,6 +268,7 @@ namespace Anchorpoint.Editor
 
         private static void KeepReferencesAlive()
         {
+            // Prevent garbage collection of icon textures by maintaining persistent references
             if (!PluginInitializer.IsConnected)
             {
                 return;
@@ -254,7 +276,7 @@ namespace Anchorpoint.Editor
             foreach (var tex in IconCache.PersistentReferences) {  }
         }
         
-        // This function will do the optimistic update of the icons
+        // Trigger optimistic update of an asset icon to modified state
         public static void MarkAssetAsModified(string commitPath)
         {
             // optimisticUpdateKeys.Add(commitPath);

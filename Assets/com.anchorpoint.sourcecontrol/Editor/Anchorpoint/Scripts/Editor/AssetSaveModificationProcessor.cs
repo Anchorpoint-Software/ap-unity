@@ -10,6 +10,11 @@ using Anchorpoint.Parser;
 
 namespace Anchorpoint.Editor
 {
+    /// <summary>
+    /// Intercepts Unity's asset save pipeline to enforce Anchorpoint file locking.
+    /// Prevents users from modifying assets locked by other users and optimistically marks modified assets for UI updates.
+    /// Integrates with Anchorpoint's CLI and user data to perform permission checks before saving assets.
+    /// </summary>
     public class AssetSaveModificationProcessor : AssetModificationProcessor
     {
         private static string rootRelativePath;
@@ -65,7 +70,7 @@ namespace Anchorpoint.Editor
             return allowedSavePaths.ToArray();
         }
         
-        // Refresh the locked files list from CLIWrapper
+        // Calls CLIWrapper to get the current locked files from Anchorpoint
         private static void RefreshLockedFiles()
         {
             lockedFiles = CLIWrapper.GetLockedFiles();
@@ -78,6 +83,7 @@ namespace Anchorpoint.Editor
             return !string.IsNullOrEmpty(cliUser?.Name) ? cliUser.Name : "Unknown User";
         }
 
+        // Converts Unity asset path to the format used by Anchorpoint for commits
         private static string GetCommitPath(string path)
         {
             // Calculate the root relative path for commit path conversion

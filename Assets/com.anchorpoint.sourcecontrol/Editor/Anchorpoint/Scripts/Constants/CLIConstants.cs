@@ -8,6 +8,10 @@ using UnityEngine;
 
 namespace Anchorpoint.Constants
 {
+    /// <summary>
+    /// Provides CLI command templates and utility methods for interacting with the Anchorpoint CLI within Unity.
+    /// This includes file commit, revert, lock, and sync operations, as well as dynamic detection of CLI path and executable.
+    /// </summary>
     public static class CLIConstants
     {
         private const string APIVersion = "--apiVersion 1";
@@ -17,6 +21,7 @@ namespace Anchorpoint.Constants
 
         public static string AnchorpointExecutablePath => GetAnchorpointExecutablePath();
 
+        // Dynamically determines the working directory by locating the nearest .gitignore file
         /// <summary>
         /// Originally the current working directory will be the Unity project parent directory so this is implemented as that to get the CWD 
         /// </summary>
@@ -24,12 +29,16 @@ namespace Anchorpoint.Constants
 
         private static string CWD => $"--cwd \"{WorkingDirectory}\"";
 
+        // Constructs a CLI command for status, optionally using a config file for large file sets
         public static string Status => $"{CWD} --json {APIVersion} status";
 
+        // Constructs a CLI command for pull, optionally using a config file for large file sets
         public static string Pull => $"{CWD} --json {APIVersion} pull";
 
+        // Constructs a CLI command for commit all, optionally using a config file for large file sets
         public static string CommitAll(string message) => $"{CWD} --json {APIVersion} commit -m \"{message}\"";
 
+        // Constructs a CLI command for commit files, optionally using a config file for large file sets
         public static string CommitFiles(string message, params string[] files)
         {
             if(files.Length > 5)
@@ -41,10 +50,13 @@ namespace Anchorpoint.Constants
             } 
         }
 
+        // Constructs a CLI command for push, optionally using a config file for large file sets
         public static string Push => $"{CWD} --json {APIVersion} push";
 
+        // Constructs a CLI command for sync all, optionally using a config file for large file sets
         public static string SyncAll(string message) => $"{CWD} --json {APIVersion} sync -m \"{message}\"";
 
+        // Constructs a CLI command for sync files, optionally using a config file for large file sets
         public static string SyncFiles(string message, params string[] files)
         {
             if(files.Length > 5)
@@ -56,6 +68,7 @@ namespace Anchorpoint.Constants
             } 
         }
         
+        // Constructs a CLI command for reverting files, optionally using a config file for large file sets
         public static string RevertFiles(params string[] files)
         {
             switch (files.Length)
@@ -75,10 +88,13 @@ namespace Anchorpoint.Constants
             }
         }
 
+        // CLI command to retrieve user list
         public static string UserList => $"{CWD} --json {APIVersion} user list";
 
+        // CLI command to retrieve lock list
         public static string LockList => $"{CWD} --json {APIVersion} lock list";
 
+        // Constructs a CLI command for creating locks, optionally using a config file for large file sets
         public static string LockCreate(bool keep, params string[] files)
         {
             if(files.Length > 5)
@@ -92,6 +108,7 @@ namespace Anchorpoint.Constants
             }
         }
 
+        // Constructs a CLI command for removing locks, optionally using a config file for large file sets
         public static string LockRemove(params string[] files)
         {
             if(files.Length > 5)
@@ -105,10 +122,13 @@ namespace Anchorpoint.Constants
             }
         }
 
+        // Constructs a CLI command for retrieving log file information
         public static string LogFile(string file, int numberOfCommits) => $"{CWD} --json {APIVersion} log -f \"{file}\" -n {numberOfCommits}";
 
+        // Wraps the given config path in CLI --config syntax
         private static string Config(string configPath) => $"--config \"{configPath}\"";
 
+        // Detects and caches the Anchorpoint CLI executable path based on the OS and installation directory
         [InitializeOnLoadMethod]
         private static void GetCLIPath()
         {
@@ -121,6 +141,7 @@ namespace Anchorpoint.Constants
                 string pattern = @"app-(\d+\.\d+\.\d+)";
                 string cliExecutableName = "ap.exe";
 
+                // Get the most recent version of the CLI by sorting versioned subdirectories
                 var versionedDirectories = Directory.GetDirectories(basePath)
                                                     .Where(d => Regex.IsMatch(Path.GetFileName(d), pattern)) // Filter directories by the pattern
                                                     .OrderByDescending(d => Version.Parse(Regex.Match(d, pattern).Groups[1].Value)) // Sort by parsed version
@@ -163,6 +184,7 @@ namespace Anchorpoint.Constants
         
         private static string FindGitIgnore(string startPath)
         {
+            // Check for .gitignore in the Unity root, then in parent directories
             // Check the starting directory (Unity project root)
             if (File.Exists(Path.Combine(startPath, ".gitignore")))
             {
@@ -186,6 +208,7 @@ namespace Anchorpoint.Constants
             return null;
         }
         
+        // Identify available versions of Anchorpoint from subdirectories and return the latest executable path
         private static string GetAnchorpointExecutablePath()
         {
             switch (Application.platform)
@@ -204,6 +227,7 @@ namespace Anchorpoint.Constants
                     string pattern = @"app-(\d+\.\d+\.\d+)";
                     string executableName = "Anchorpoint.exe";
 
+                    // Identify available versions of Anchorpoint from subdirectories and return the latest executable path
                     var versionedDirectories = Directory.GetDirectories(basePath)
                         .Where(d => Regex.IsMatch(Path.GetFileName(d), pattern))
                         .OrderByDescending(d => Version.Parse(Regex.Match(d, pattern).Groups[1].Value))

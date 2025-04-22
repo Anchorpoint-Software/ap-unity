@@ -9,6 +9,10 @@ using Anchorpoint.Events;
 
 namespace Anchorpoint.Parser
 {
+    /// <summary>
+    /// Manages CLI data such as status, lock files, current user, and user pictures.
+    /// Handles caching and updating logic for UI and system sync with CLI responses.
+    /// </summary>
     public static class DataManager
     {
         private static CLIStatus _status;
@@ -22,11 +26,13 @@ namespace Anchorpoint.Parser
         
         private static List<CLIUser> userList;
 
+        // Returns the latest CLI status information
         public static CLIStatus GetStatus()
         {
             return _status;
         }
 
+        // Adds a new error to the list of CLI errors
         public static void AddError(CLIError error)
         {
             errors.Add(error);
@@ -37,11 +43,13 @@ namespace Anchorpoint.Parser
             return errors;
         }
 
+        // Clears all stored CLI errors
         public static void ClearErrors()
         {
             errors.Clear();
         }
 
+        // Updates internal data based on the given type, primarily CLIStatus
         public static void UpdateData<T>(T data) where T : class
         {
             switch (data)
@@ -50,7 +58,7 @@ namespace Anchorpoint.Parser
                     // Update the CLI status
                     _status = status;
 
-                    // Update the lock files from the CLI status
+                    // Copy locked files if available, otherwise clear the list
                     if (_status.LockedFiles != null)
                     {
                         _lockFiles = new Dictionary<string, string>(_status.LockedFiles);
@@ -61,7 +69,7 @@ namespace Anchorpoint.Parser
                         _lockFiles.Clear();
                     }
                     
-                    // Update outdated files
+                    // Copy outdated files if available, otherwise clear the list
                     if (_status.OutdatedFiles != null)
                     {
                         outdatedFiles = new HashSet<string>(_status.OutdatedFiles);
@@ -80,21 +88,25 @@ namespace Anchorpoint.Parser
             }
         }
 
+        // Returns a dictionary of files that are currently locked
         public static Dictionary<string, string> GetLockList()
         {
             return _lockFiles;
         }
 
+        // Sets the current CLI user
         public static void UpdateCurrentUser(CLIUser user)
         {
             currentUser = user;
         }
 
+        // Returns the current CLI user
         public static CLIUser GetCurrentUser()
         {
             return currentUser;
         }
         
+        // Stores the user list and maps email addresses to profile picture URLs
         public static void UpdateUserList(List<CLIUser> users)
         {
             userList = users;
@@ -107,6 +119,7 @@ namespace Anchorpoint.Parser
             }
         }
         
+        // Retrieves or downloads the user profile picture from cache or URL
         public static void GetUserPicture(string email, Action<Texture2D> callback)
         {
             if (emailToPictureTexture.TryGetValue(email, out var texture))
@@ -128,6 +141,7 @@ namespace Anchorpoint.Parser
             }
         }
         
+        // Coroutine that downloads a user profile picture from the provided URL
         private static IEnumerator DownloadUserPictureCoroutine(string email, string url, Action<Texture2D> callback)
         {
             using (UnityWebRequest request = UnityWebRequestTexture.GetTexture(url))
@@ -148,11 +162,13 @@ namespace Anchorpoint.Parser
             }
         }
 
+        // Returns the cached list of CLI users
         public static List<CLIUser> GetUserList()
         {
             return userList;
         }
         
+        // Returns the list of outdated files detected in the last CLI status check
         public static HashSet<string> GetOutdatedFiles()
         {
             return outdatedFiles;
