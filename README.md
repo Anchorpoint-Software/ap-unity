@@ -7,13 +7,10 @@ This plugin allows you to commit files and view status and locked files directly
 - 📝 Commit and Revert buttons directly inside Unity
 - 🛠️ Automatic handling of `.meta` files
 - 🔍 Git status tracking and real-time UI updates
-- ⚠️ Conflict detection with resolution prompts
-- 💬 Error handling and display using CLI feedback
 - 🔒 Integration with file locking (prevents editing locked files)
-- 🔁 Automatic CLI status polling and reconnect support
 
 ## Getting Started
-1. Import the package from the asset store [Link](https://assetstore.unity.com/?srsltid=AfmBOoqEUozEFSxiGAGbgA-8mVN3LNLWgadtA0uAD-s0MG5VEZuFFxFW) or simply download this repo and import it as Unity package.
+1. Download the plugin from the [Anchorpoint documentation](https://docs.anchorpoint.app/docs/general/integrations/unity/)
 2. Go to Window > Anchorpoint to open the plugin window.
 3. Click Connect to Anchorpoint to pair with your active Anchorpoint project.
 4. Review changed files and either commit or revert.
