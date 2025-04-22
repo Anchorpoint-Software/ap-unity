@@ -8,25 +8,32 @@ using System.Threading;
 using Anchorpoint.Events;
 using Anchorpoint.Logger;
 using UnityEditor;
-using UnityEngine;
 
 namespace Anchorpoint.Wrapper
 {
+    /// <summary>
+    /// Static wrapper class that manages CLI communication between Unity and the Anchorpoint application.
+    /// Handles queuing, command execution, and parsing of results.
+    /// </summary>
     public delegate void Callback();
 
     public static class CLIWrapper
     {
+        // Accumulates the output received from CLI command executions
         private static string Output { get; set; }
-
         private static CommandQueue _commandQueue = new CommandQueue();
+
+        // Determines whether the Status command should be queued after another CLI operation
         public static bool isStatusQueuedAfterCommand = false;  // Track when Status should be queued
         private static bool isRefreshing = false;                // Flag for refresh control
         private static readonly Queue<Action> refreshQueue = new Queue<Action>();  // Queue to manage refresh actions
         
         public static bool isWindowActive = false;
+        
+        // Logs the CLI executable path used by Anchorpoint
         public static void CLIPath() => AnchorpointLogger.Log(CLIConstants.CLIPath);
 
-        // Updated Status command to run on Unity main thread, but only after other commands
+        // Issues the status command to update the file tracking state from the CLI
         public static void Status()
         {
             if (isStatusQueuedAfterCommand)
@@ -200,6 +207,7 @@ namespace Anchorpoint.Wrapper
             AnchorpointLogger.Log($"Running Command: {commandText}");
             AddOutput($"<color=green>Running Command: {commandText}</color>");
             
+            // Prepare and launch the CLI process with appropriate command arguments
             try
             {
                 ProcessStartInfo startInfo = new()
@@ -215,6 +223,7 @@ namespace Anchorpoint.Wrapper
                 using Process process = new() { StartInfo = startInfo };
                 process.Start();
                 
+                // Decide between async (sequential) and sync error reading
                 if (sequential)
                 {
                     process.ErrorDataReceived += (sender, e) =>
@@ -253,7 +262,7 @@ namespace Anchorpoint.Wrapper
             }
         }
 
-        // Handle queuing and delaying RefreshWindow to prevent multiple triggers
+        // Queues a refresh call to be executed after a command finishes
         private static void QueueRefresh(Command command)
         {
             // Add the refresh action to the queue
@@ -275,7 +284,7 @@ namespace Anchorpoint.Wrapper
             }
         }
 
-        // Process each refresh sequentially with a delay in between
+        // Executes refresh calls sequentially with delay to avoid overlapping updates
         private static void ProcessNextRefresh()
         {
             if (refreshQueue.Count == 0)
@@ -301,6 +310,7 @@ namespace Anchorpoint.Wrapper
             };
         }
 
+        // Parses the structured JSON output returned by the CLI based on the command type
         private static void ProcessOutput(Command command, string jsonOutput, Callback callback)
         {
             if (jsonOutput.Contains("\"error\":\"No Project\""))

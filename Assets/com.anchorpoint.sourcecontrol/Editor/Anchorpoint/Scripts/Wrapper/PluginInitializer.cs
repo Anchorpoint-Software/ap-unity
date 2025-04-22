@@ -3,13 +3,16 @@ using System.IO;
 using System.Linq;
 using UnityEditor;
 using Anchorpoint.Logger;
-using System.Timers;
 using Anchorpoint.Events;
 using Anchorpoint.Parser;
-using UnityEngine;
 
 namespace Anchorpoint.Wrapper
 {
+    /// <summary>
+    /// Initializes and manages the connection between Unity and the Anchorpoint desktop application.
+    /// Handles automatic reconnection, connection state tracking, and message processing from the Anchorpoint CLI.
+    /// Provides hooks for Unity Editor state changes and ensures proper communication lifecycle.
+    /// </summary>
     [InitializeOnLoad]
     public static class PluginInitializer
     {
@@ -32,6 +35,7 @@ namespace Anchorpoint.Wrapper
 
         static PluginInitializer()
         {
+            // Static constructor sets up Unity editor callbacks for connection management and initialization.
             if (!AnchorpointChecker.IsAnchorpointInstalled())
             {
                 return;
@@ -46,6 +50,7 @@ namespace Anchorpoint.Wrapper
 
         private static void Initialize()
         {
+            // Initializes the connect handler and subscribes to Anchorpoint connection messages.
             if (HasCompilationErrors())
             {
                 StopConnection();
@@ -62,7 +67,7 @@ namespace Anchorpoint.Wrapper
 
         private static void OnPlayModeStateChanged(PlayModeStateChange state)
         {
-            // When Unity returns to Edit mode from Play mode, re-check connection state
+            // Automatically reconnects or disconnects based on Unity play mode state.
             if (state == PlayModeStateChange.EnteredEditMode)
             {
                 IsPlaymode = false;
@@ -81,6 +86,7 @@ namespace Anchorpoint.Wrapper
 
         public static void StartConnection()
         {
+            // Sets the connected state and initiates the CLI connection.
             WasConnected = true;
             connectHandler?.StartConnect();
             AnchorpointLogger.Log("Starting Connection");
@@ -88,6 +94,7 @@ namespace Anchorpoint.Wrapper
 
         private static void StopConnection()
         {
+            // Stops the CLI connection and logs the action.
             connectHandler?.StopConnect();
             AnchorpointLogger.Log("Connection stopped");
         }
@@ -105,6 +112,7 @@ namespace Anchorpoint.Wrapper
 
         private static void AfterAssemblyReload()
         {
+            // Reconnect after Unity assembly reload if conditions are met.
             if (!IsConnected && WasConnected && !IsPlaymode)
             {
                 Initialize();
@@ -128,6 +136,7 @@ namespace Anchorpoint.Wrapper
 
         private static void HandleConnectMessage(ConnectMessage message)
         {
+            // Processes messages received from Anchorpoint CLI and updates project state accordingly.
             FetchCurrentUser();
             AnchorpointLogger.LogWarning($"Message type {message.type}");
             
@@ -167,6 +176,7 @@ namespace Anchorpoint.Wrapper
         
         private static void FetchCurrentUser()
         {
+            // Fetch current user from CLI if not cached already.
             if (DataManager.GetCurrentUser() == null)
             {
                 CLIWrapper.GetCurrentUser();
@@ -175,6 +185,7 @@ namespace Anchorpoint.Wrapper
         
         private static bool HasCompilationErrors()
         {
+            // Reads the last few lines of Editor.log to detect compile-time errors.
             string editorLogPath = GetEditorLogPath();
             if (!File.Exists(editorLogPath)) return false;
 
@@ -206,6 +217,7 @@ namespace Anchorpoint.Wrapper
         
         private static void PeriodicConnectionCheck()
         {
+            // Periodically checks if Unity is disconnected and tries to reconnect if necessary.
             // Get the current time in seconds
             double currentTime = EditorApplication.timeSinceStartup;
 
@@ -234,6 +246,7 @@ namespace Anchorpoint.Wrapper
             editorLogPath = Path.Combine(System.Environment.GetFolderPath(System.Environment.SpecialFolder.UserProfile), "Library", "Logs", "Unity", "Editor.log");
 #endif
 
+            // Returns platform-specific path to the Unity Editor log file.
             return editorLogPath;
         }
     }

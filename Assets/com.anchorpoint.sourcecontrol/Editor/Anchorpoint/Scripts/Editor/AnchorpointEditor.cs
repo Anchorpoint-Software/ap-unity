@@ -15,6 +15,23 @@ using Unity.EditorCoroutines.Editor;
 
 namespace Anchorpoint.Editor
 {
+    /// <summary>
+    /// AnchorpointEditor is the main Unity EditorWindow class responsible for displaying and managing 
+    /// the Anchorpoint Source Control interface inside the Unity Editor.
+    /// 
+    /// This class handles:
+    /// - Displaying various UI states (connect, reconnect, connected, try again).
+    /// - Initializing and rendering a dynamic TreeView that reflects project file changes.
+    /// - Tracking file states such as added, modified, deleted, and conflicts using CLI output.
+    /// - Enabling commit and revert actions with real-time feedback from the Anchorpoint CLI.
+    /// - Showing live progress, error messages, and spinner animations for asynchronous operations.
+    /// - Managing UI state transitions based on connection and command statuses.
+    /// 
+    /// It also includes optimistic UI updates, conflict resolution prompts, and handles visual elements
+    /// such as commit message fields, labels, and icon coloring based on file status.
+    /// 
+    /// Requires the Anchorpoint desktop app to be installed and running with an active project.
+    /// </summary>
     public class AnchorpointEditor : EditorWindow
     {
         [SerializeField] private VisualTreeAsset m_VisualTreeAsset = default;

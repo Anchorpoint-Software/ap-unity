@@ -11,6 +11,10 @@ using UnityEditor;
 
 namespace Anchorpoint.Wrapper
 {
+    /// <summary>
+    /// Handles communication with the Anchorpoint CLI for maintaining a live connection from Unity.
+    /// Continuously listens for messages and dispatches them to the main thread for UI-safe processing.
+    /// </summary>
     public class ConnectCommandHandler
     {
         private Process connectProcess;
@@ -18,13 +22,14 @@ namespace Anchorpoint.Wrapper
         private volatile bool isRunning;
         private bool previousConnectionState;
         
-        // Thread-safe queue to store actions to be executed on the main thread
+        // Queue to pass CLI messages from the background thread to the main Unity thread.
         private static readonly Queue<Action> mainThreadActions = new Queue<Action>();
         private static readonly object queueLock = new object();
 
         private StringBuilder jsonBuffer = new StringBuilder();
         private int braceCount = 0;
 
+        // Starts the background thread to establish and maintain connection with Anchorpoint CLI.
         public void StartConnect()
         {
             if (isRunning)
@@ -36,6 +41,7 @@ namespace Anchorpoint.Wrapper
             EditorApplication.update += OnEditorUpdate; // Subscribe to tick updates
         }
 
+        // Gracefully stops the background thread and cleans up the process.
         public void StopConnect()
         {
             isRunning = false;
@@ -72,6 +78,7 @@ namespace Anchorpoint.Wrapper
             EditorApplication.update -= OnEditorUpdate;
         }
 
+        // Runs the Anchorpoint CLI connect process and listens to output streams.
         private void RunConnectProcess()
         {
             try
@@ -107,6 +114,7 @@ namespace Anchorpoint.Wrapper
             }
         }
 
+        // Reconstruct JSON from stream chunks and dispatch parsed messages.
         private void OnConnectDataReceived(string data)
         {
             if (string.IsNullOrWhiteSpace(data))
@@ -143,6 +151,7 @@ namespace Anchorpoint.Wrapper
             }
         }
 
+        // Called every editor frame; executes queued main thread actions and monitors connection state.
         private void OnEditorUpdate()
         {
             if (!isRunning)
