@@ -220,6 +220,13 @@ namespace Anchorpoint.Wrapper
                     CreateNoWindow = true
                 };
 
+                // On Windows, use Windows-1252 encoding to properly handle special characters (ä, ö, ü, etc.)
+                if (Environment.OSVersion.Platform == PlatformID.Win32NT)
+                {
+                    startInfo.StandardOutputEncoding = System.Text.Encoding.GetEncoding(1252);
+                    startInfo.StandardErrorEncoding = System.Text.Encoding.GetEncoding(1252);
+                }
+
                 using Process process = new() { StartInfo = startInfo };
                 process.Start();
                 
@@ -313,6 +320,8 @@ namespace Anchorpoint.Wrapper
         // Parses the structured JSON output returned by the CLI based on the command type
         private static void ProcessOutput(Command command, string jsonOutput, Callback callback)
         {
+            AnchorpointLogger.Log("BLAAA "+jsonOutput);
+            
             if (jsonOutput.Contains("\"error\":\"No Project\""))
             {
                 AnchorpointLogger.LogError("No project found on Anchorpoint");
