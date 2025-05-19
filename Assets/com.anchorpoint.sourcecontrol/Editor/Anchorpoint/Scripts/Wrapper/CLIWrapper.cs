@@ -319,9 +319,7 @@ namespace Anchorpoint.Wrapper
 
         // Parses the structured JSON output returned by the CLI based on the command type
         private static void ProcessOutput(Command command, string jsonOutput, Callback callback)
-        {
-            AnchorpointLogger.Log("BLAAA "+jsonOutput);
-            
+        {            
             if (jsonOutput.Contains("\"error\":\"No Project\""))
             {
                 AnchorpointLogger.LogError("No project found on Anchorpoint");
