@@ -5,6 +5,7 @@ using UnityEditor;
 using System.Text.RegularExpressions;
 using Anchorpoint.Logger;
 using UnityEngine;
+using Anchorpoint.Scripts.Config;
 
 namespace Anchorpoint.Constants
 {
