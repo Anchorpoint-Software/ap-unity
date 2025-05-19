@@ -1058,10 +1058,10 @@ namespace Anchorpoint.Editor
                     EditorCoroutineUtility.StartCoroutineOwnerless(DelayedExecution(textScreenTime));
                 }
                 else
-                {        
+                {       
                     string trimmedOutput = output.Split('.')[0]
                         .Replace("{\"progress-text\": \"", "")
-                        .Replace("}", "")
+                        .Replace("\"}", "")
                         .Trim();
                     processingTextLabel.text = trimmedOutput;
                 }  
