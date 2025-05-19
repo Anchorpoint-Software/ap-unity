@@ -1,4 +1,6 @@
-# 0.2
+# 1.0.0
+
+Initial version of the plugin, including connection to the Anchorpoint desktop application via a CLI, a dedicated commit window and the option to display file status in the project window.
 
 - Open project state is not detected by Unity after importing files
 - Added optimistic update for the status in the Project Window
@@ -18,6 +20,3 @@
 - Keep the refresh button enabled all the time
 - Refresh Anchorpoint UI after a solved conflict state
 
-# 0.1
-
-Initial version of the plugin, including connection to the Anchorpoint desktop application via a CLI, a dedicated commit window and the option to display file status in the project window.
