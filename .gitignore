@@ -76,3 +76,6 @@ crashlytics-build.properties
 
 # Unity Asset Store tools
 com.unity.asset-store-tools/
+
+# Anchorpoint approj metafiles
+*.approj.meta
