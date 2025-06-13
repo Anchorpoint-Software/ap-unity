@@ -1,3 +1,7 @@
+# 1.0.1
+
+Updating the license and preparing the package for FAB.
+
 # 1.0.0
 
 Initial version of the plugin, including connection to the Anchorpoint desktop application via a CLI, a dedicated commit window and the option to display file status in the project window.
