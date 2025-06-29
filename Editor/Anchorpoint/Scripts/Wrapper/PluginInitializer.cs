@@ -19,7 +19,7 @@ namespace Anchorpoint.Wrapper
         private static ConnectCommandHandler connectHandler;
         public static bool IsInitialized => connectHandler != null;
         public static bool IsConnected => connectHandler?.IsConnected() ?? false;
-        public static bool IsNotAnchorpointProject { get; private set; }
+        public static bool IsNotAnchorpointProject { get; private set; } = true;
         public static bool IsProjectOpen { get; private set; }
         public static bool IsPlaymode { get; private set; }
         

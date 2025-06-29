@@ -79,3 +79,6 @@ com.unity.asset-store-tools/
 
 # Anchorpoint approj metafiles
 *.approj.meta
+
+Logs.meta
+UserSettings.meta
