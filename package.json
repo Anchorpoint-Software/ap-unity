@@ -1,6 +1,6 @@
 {
   "name": "com.anchorpoint.sourcecontrol",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "displayName": "Anchorpoint",
   "description": "Anchorpoint is a Git-based version control solution for artists. This package is a plugin that connects the Anchorpoint desktop app with Unity. It requires the Anchorpoint desktop application and an Anchorpoint account. Visit https://www.anchorpoint.app/ for more information",
   "unity": "2022.3",
