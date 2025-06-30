@@ -11,6 +11,14 @@
             </ui:VisualElement>
         </ui:VisualElement>
     </ui:VisualElement>
+    <ui:VisualElement name="CheckingProjectStatus" style="flex-grow: 1; align-self: center; justify-content: center; display: flex; visibility: visible; align-items: center; flex-direction: column; flex-wrap: nowrap; margin-top: 0; margin-right: 0; margin-bottom: 0; margin-left: 0; overflow: visible;">
+        <ui:VisualElement style="align-items: center; justify-content: space-around; align-self: auto; top: 100px;">
+            <ui:Label tabindex="-1" text="Checking the status of the project..." parse-escape-sequences="true" display-tooltip-when-elided="true" name="DescriptionCheckingWindow" focusable="false" style="margin-left: 0; padding-left: 0; padding-bottom: 0; padding-right: 0; padding-top: 0; margin-top: 0; margin-right: 0; margin-bottom: 0; width: 392px; height: 80px; font-size: 13px; -unity-text-align: middle-center; white-space: normal; text-overflow: clip;" />
+            <ui:VisualElement style="flex-grow: 1; flex-direction: row; align-items: center; justify-content: center;">
+                <ui:VisualElement name="CheckingSpinner" style="width: 20px; height: 20px; background-image: url(&quot;project://database/Packages/com.anchorpoint.sourcecontrol/Editor/Anchorpoint/UI/Logos/Toggle%20Button.png?fileID=21300000&amp;guid=35a04a1d25fc9416d90444373d6bb981&amp;type=3#Toggle Button&quot;); -unity-background-scale-mode: scale-to-fit;" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:VisualElement>
     <ui:VisualElement name="ConnectTryAgain" style="flex-grow: 1; align-self: center; justify-content: center; display: flex; visibility: visible; align-items: center; flex-direction: column; flex-wrap: nowrap; margin-top: 0; margin-right: 0; margin-bottom: 0; margin-left: 0; overflow: visible;">
         <ui:VisualElement style="align-items: center; justify-content: space-around; align-self: auto; top: 100px;">
             <ui:Label tabindex="-1" text="This Unity project is not yet maintained by Anchorpoint. You need to create a project as Git repository first." parse-escape-sequences="true" display-tooltip-when-elided="true" name="DescriptionTryAgainWindow" focusable="false" enable-rich-text="true" style="margin-left: 0; padding-left: 0; padding-bottom: 0; padding-right: 0; padding-top: 0; margin-top: 0; margin-right: 0; margin-bottom: 0; width: 392px; height: 80px; font-size: 13px; -unity-text-align: middle-center; white-space: normal; text-overflow: clip;" />

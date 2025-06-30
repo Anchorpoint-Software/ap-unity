@@ -35,8 +35,9 @@ namespace Anchorpoint.Editor
     public class AnchorpointEditor : EditorWindow
     {
         [SerializeField] private VisualTreeAsset m_VisualTreeAsset = default;
-        
+
         private VisualElement connectAnchorpointView;
+        private VisualElement checkingProjectStatusView;
         private VisualElement connectTryAgainView;
         private VisualElement connectedView;
         private VisualElement reconnectView;
@@ -57,7 +58,7 @@ namespace Anchorpoint.Editor
         private Button revertButton;
         private Button allButton;
         private Button noneButton;
-        private Button refreshButton;        
+        private Button refreshButton;
         private VisualElement refreshButtonIcon;
         private Button disconnectButton;
         private Button helpConnectedWinButton;
@@ -65,38 +66,42 @@ namespace Anchorpoint.Editor
         private VisualElement loadingImg;
         private VisualElement refreshImg;
         private Label processingTextLabel;
-        
+
         //  Connect to Anchorpoint window
         private Label descriptionConnectWin;
         private Button connectToAnchorpoint;
         private Button helpConeectWindButton;
-        
+
         //  Try again Anchorpoint window
         private Label descriptionTryAgainWin;
         private Button openAnchorpointButton;
         private Button trAgainAnchorpointButton;
         private Button helpTryAgainWindowButton;
-        
+
         //  Pause window
         private Button reConnectToAnchorpoint;
-        
+
         // Global paths
-        private string projectPath;      // Absolute path to the Unity project root
+        private string projectPath; // Absolute path to the Unity project root
         private const string assetsFolderName = "Assets";
         private const string anchorPointIcon = "d8e0264a1e3a54b09aaf9e7ac62d4e1f";
         private const string helpUrl = "https://docs.anchorpoint.app/docs/version-control/first-steps/unity/";
-        private const string noProjectErrorDescription = "This Unity project is not maintained by Anchorpoint. You will need to create a project first.\n\nCheck the documentation for help.";
-        private const string validatingDescription = "Anchorpoint's desktop application is not available.\n\nCheck the documentation for help.";
-        
+
+        private const string noProjectErrorDescription =
+            "This Unity project is not maintained by Anchorpoint. You will need to create a project first.\n\nCheck the documentation for help.";
+
+        private const string validatingDescription =
+            "Anchorpoint's desktop application is not available.\n\nCheck the documentation for help.";
+
         // Now count unique files from the merged dictionary
         private HashSet<string> processedFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        
-        private bool inProcess = false;       // Flag to check is if some commit/revert is in process
-        private bool hasConflict = false;      // Flag to check is if some conflict
-        private bool hasMetaFile = false;       // Flag to check if there is meta file in changed files
-        private bool commandIncomplete = false;     // Flag to check if the command has run completely.
+
+        private bool inProcess = false; // Flag to check is if some commit/revert is in process
+        private bool hasConflict = false; // Flag to check is if some conflict
+        private bool hasMetaFile = false; // Flag to check if there is meta file in changed files
+        private bool commandIncomplete = false; // Flag to check if the command has run completely.
         private bool hasError = false;
-        
+
         // Spinner wheel animation things
         private List<Texture2D> gifFrames = new List<Texture2D>();
         private int currentFrame = 0;
@@ -105,12 +110,15 @@ namespace Anchorpoint.Editor
 
         private const float textScreenTime = 5f;
         private string cacheProcessingLabel;
-        
+
         private void OnEnable()
         {
-            AnchorpointEvents.RefreshTreeWindow += OnEditorUpdate;  //  Is triggered in QueueRefresh after Status command is executed
+            AnchorpointEvents.RefreshTreeWindow +=
+                OnEditorUpdate; //  Is triggered in QueueRefresh after Status command is executed
             AnchorpointEvents.OnCommandOutputReceived += OnCommandOutputReceived;
-            AnchorpointEvents.RefreshView += RefreshView;   // Is triggered in Plugin Initializer after HandleConnectMessage. To change the windows view form Connected/ConnectToAnchorpoint/PauseAnchorpoint/TryAgain
+            
+            // Is triggered in Plugin Initializer after HandleConnectMessage. To change the windows view form Connected/ConnectToAnchorpoint/PauseAnchorpoint/TryAgain
+            AnchorpointEvents.RefreshView += RefreshView;
         }
 
         private void OnDisable()
@@ -125,7 +133,7 @@ namespace Anchorpoint.Editor
             ChangingIndRefreshButton(true);
 
             if (!CLIWrapper.isWindowActive) return;
-            
+
             rootVisualElement.Clear();
             CreateGUI();
         }
@@ -143,12 +151,13 @@ namespace Anchorpoint.Editor
         public void CreateGUI()
         {
             root = rootVisualElement;
-            
+
             VisualElement labelFromUXML = m_VisualTreeAsset.Instantiate();
             root.Add(labelFromUXML);
-            
-            //  Getting three windows in the flow
+
+            //  Getting windows in the flow
             connectAnchorpointView = root.Q<VisualElement>("ConnectAnchorpoint");
+            checkingProjectStatusView = root.Q<VisualElement>("CheckingProjectStatus");
             connectTryAgainView = root.Q<VisualElement>("ConnectTryAgain");
             connectedView = root.Q<VisualElement>("Connected");
             reconnectView = root.Q<VisualElement>("PauseAnchorpoint");
@@ -158,14 +167,18 @@ namespace Anchorpoint.Editor
 
         private void RefreshView()
         {
-            if (PluginInitializer.IsNotAnchorpointProject)
+            if (PluginInitializer.IsCheckingProjectStatus)
+            {
+                ShowCheckingProjectStatus();
+            }
+            else if (PluginInitializer.IsNotAnchorpointProject)
             {
                 ShowNoProjectError();
             }
             else if (PluginInitializer.IsInitialized && PluginInitializer.IsConnected)
-            {                
+            {
                 ShowConnectedWindow();
-                CheckConflictedFiles();                
+                CheckConflictedFiles();
                 showCachedProcessingLabel();
             }
             else if (PluginInitializer.IsPlaymode && PluginInitializer.WasConnected)
@@ -179,10 +192,12 @@ namespace Anchorpoint.Editor
             }
         }
 
-        private void showCachedProcessingLabel(){
+        private void showCachedProcessingLabel()
+        {
             if (commandIncomplete)
             {
-                processingTextLabel.text = string.IsNullOrEmpty(cacheProcessingLabel) ? "Processing..." : cacheProcessingLabel;
+                processingTextLabel.text =
+                    string.IsNullOrEmpty(cacheProcessingLabel) ? "Processing..." : cacheProcessingLabel;
                 StartSpinnerAnimation();
             }
         }
@@ -204,10 +219,11 @@ namespace Anchorpoint.Editor
             }
             else
             {
-                AnchorpointLogger.Log($"Project Root found: {projectRoot.Name}, Child Count: {projectRoot.Children.Count}");
+                AnchorpointLogger.Log(
+                    $"Project Root found: {projectRoot.Name}, Child Count: {projectRoot.Children.Count}");
             }
 
-            treeViewItems.Clear();  // Clear any previous data
+            treeViewItems.Clear(); // Clear any previous data
             int idCounter = 0;
             PopulateTreeItems(projectRoot, treeViewItems, ref idCounter);
 
@@ -221,7 +237,7 @@ namespace Anchorpoint.Editor
                 var checkbox = new Toggle { name = "checkbox" };
                 checkbox.style.marginRight = 5;
                 checkbox.style.marginTop = 3.5f;
-               
+
                 checkbox.RegisterCallback<ChangeEvent<bool>>(evt =>
                 {
                     if (inProcess || hasConflict)
@@ -230,17 +246,18 @@ namespace Anchorpoint.Editor
                         checkbox.SetValueWithoutNotify(!evt.newValue);
                         return;
                     }
-                    
+
                     if (!PluginInitializer.IsConnected)
                     {
                         RefreshView();
                         return;
                     }
-                    
+
                     var itemData = (ProjectData)checkbox.userData;
                     bool isChecked = evt.newValue;
-                    
-                    var selectedItems = treeView.selectedIndices.Select(i => treeView.GetItemDataForIndex<ProjectData>(i)).ToList();
+
+                    var selectedItems = treeView.selectedIndices
+                        .Select(i => treeView.GetItemDataForIndex<ProjectData>(i)).ToList();
 
                     if (selectedItems.Count > 1)
                     {
@@ -255,15 +272,17 @@ namespace Anchorpoint.Editor
                         // If only one file is selected, toggle it normally
                         itemData.IsChecked = isChecked;
                     }
-                
+
                     // If the item is a directory, update all its children
                     if (itemData.IsDirectory && itemData.Children != null && itemData.Children.Any())
                     {
                         SetAllCheckboxesRecursive(itemData.Children, isChecked);
                     }
-                
+
                     var isAnyFileSelected = IsAnyFileSelected();
-                    commitButton.SetEnabled(isAnyFileSelected && !string.IsNullOrWhiteSpace(commitMessageField.value));// Update the commit button state
+                    commitButton.SetEnabled(isAnyFileSelected &&
+                                            !string.IsNullOrWhiteSpace(commitMessageField
+                                                .value)); // Update the commit button state
                     revertButton.SetEnabled(isAnyFileSelected); // Update the revert button state
                     commitMessageField.SetEnabled(isAnyFileSelected);
                     // Refresh all visible items in the tree view
@@ -291,7 +310,7 @@ namespace Anchorpoint.Editor
 
                 var checkbox = element.Q<Toggle>("checkbox");
                 checkbox.userData = itemData;
-                
+
                 checkbox.SetValueWithoutNotify(itemData.IsChecked);
 
                 var icon = element.Q<Image>("icon");
@@ -302,13 +321,13 @@ namespace Anchorpoint.Editor
                 // Set the appropriate color based on the status using StyleColor
                 switch (itemData.Status)
                 {
-                    case "A":  // Added files
+                    case "A": // Added files
                         nameLabel.style.color = new StyleColor(EditorColors.GREEN);
                         break;
-                    case "M":  // Modified files
+                    case "M": // Modified files
                         nameLabel.style.color = new StyleColor(EditorColors.YELLOW);
                         break;
-                    case "D":  // Deleted files
+                    case "D": // Deleted files
                         nameLabel.style.color = new StyleColor(EditorColors.RED);
                         break;
                     default:
@@ -358,7 +377,7 @@ namespace Anchorpoint.Editor
                 childItems = new List<TreeViewItemData<ProjectData>>();
                 foreach (var child in data.Children)
                 {
-                    child.Parent = data;  // Set the parent reference for the child
+                    child.Parent = data; // Set the parent reference for the child
                     PopulateTreeItems(child, childItems, ref idCounter);
                 }
             }
@@ -494,7 +513,8 @@ namespace Anchorpoint.Editor
             projectPath = Directory.GetParent(Application.dataPath)?.FullName;
 
             string projectName = Directory.GetParent(Application.dataPath)?.Name;
-            string rootRelativePath = projectPath.Substring(CLIConstants.WorkingDirectory.Length).TrimStart(Path.DirectorySeparatorChar);
+            string rootRelativePath = projectPath.Substring(CLIConstants.WorkingDirectory.Length)
+                .TrimStart(Path.DirectorySeparatorChar);
 
             var projectRoot = new ProjectData
             {
@@ -521,7 +541,9 @@ namespace Anchorpoint.Editor
                 var childNode = currentNode.Children.FirstOrDefault(c => c.Name == currentPart && c.IsDirectory);
                 if (childNode == null)
                 {
-                    string fullPath = currentNode.Path != null ? Path.Combine(currentNode.Path, currentPart) : currentPart;
+                    string fullPath = currentNode.Path != null
+                        ? Path.Combine(currentNode.Path, currentPart)
+                        : currentPart;
 
                     // Calculate the CommitPath
                     string commitPath = !string.IsNullOrEmpty(currentNode.CommitPath)
@@ -546,19 +568,21 @@ namespace Anchorpoint.Editor
                 foreach (var file in files)
                 {
                     string relativePath = file.Key; // e.g., "Assets/New Folder 1/New Folder/New Folder/One.cs"
-                    string statusFlag = file.Value;  // e.g., "D"
+                    string statusFlag = file.Value; // e.g., "D"
                     string fullPath = Path.Combine(CLIConstants.WorkingDirectory, relativePath);
 
                     if (!fullPath.StartsWith(projectPath, StringComparison.OrdinalIgnoreCase))
                         continue;
 
-                    string projectRelativePath = fullPath.Replace(projectPath, "").TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+                    string projectRelativePath = fullPath.Replace(projectPath, "")
+                        .TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
 
                     if (relativePath.EndsWith(".meta"))
                     {
                         string baseRelativePath = relativePath.Substring(0, relativePath.Length - 5); // Remove ".meta"
                         string baseFullPath = fullPath.Substring(0, fullPath.Length - 5);
-                        string baseProjectRelativePath = baseFullPath.Replace(projectPath, "").TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+                        string baseProjectRelativePath = baseFullPath.Replace(projectPath, "")
+                            .TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
 
                         // Check if the base path is a directory
                         bool isDirectory = !Path.HasExtension(baseFullPath);
@@ -566,10 +590,13 @@ namespace Anchorpoint.Editor
                         if (isDirectory)
                         {
                             // It's an empty or deleted folder
-                            ProjectData directoryNode = findOrCreatePath(Path.GetDirectoryName(baseProjectRelativePath), rootNode);
+                            ProjectData directoryNode = findOrCreatePath(Path.GetDirectoryName(baseProjectRelativePath),
+                                rootNode);
 
                             // Avoid adding duplicate folders
-                            if (!directoryNode.Children.Any(c => c.Name.Equals(Path.GetFileName(baseFullPath), StringComparison.OrdinalIgnoreCase) && c.IsDirectory))
+                            if (!directoryNode.Children.Any(c =>
+                                    c.Name.Equals(Path.GetFileName(baseFullPath), StringComparison.OrdinalIgnoreCase) &&
+                                    c.IsDirectory))
                             {
                                 string folderName = Path.GetFileName(baseFullPath);
                                 string folderProjectRelativePath = baseProjectRelativePath;
@@ -602,7 +629,8 @@ namespace Anchorpoint.Editor
                         if (processedPaths.Contains(fullPath))
                             continue; // Skip if already processed
 
-                        ProjectData directoryNode = findOrCreatePath(Path.GetDirectoryName(projectRelativePath), rootNode);
+                        ProjectData directoryNode =
+                            findOrCreatePath(Path.GetDirectoryName(projectRelativePath), rootNode);
 
                         ProjectData newItem = new ProjectData
                         {
@@ -619,14 +647,15 @@ namespace Anchorpoint.Editor
                     }
                 }
             };
-            
+
             Dictionary<string, string> combined = CombineStagedAndUnstaged(status.Staged, status.NotStaged);
             addFilesToStructure(combined, projectRoot);
-            
+
             return projectRoot;
         }
-        
-        private Dictionary<string, string> CombineStagedAndUnstaged(Dictionary<string, string> stagedFiles, Dictionary<string, string> notStagedFiles)
+
+        private Dictionary<string, string> CombineStagedAndUnstaged(Dictionary<string, string> stagedFiles,
+            Dictionary<string, string> notStagedFiles)
         {
             Dictionary<string, string> combined = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
@@ -661,7 +690,7 @@ namespace Anchorpoint.Editor
 
             return combined;
         }
-        
+
         /// <summary>
         /// Merges two status strings for the same file and returns a unified status.
         ///  resolving conflicts via ResolveUnionStatus when a file appears in both.
@@ -745,6 +774,7 @@ namespace Anchorpoint.Editor
                 return GetSelectedFiles().Count > 0;
             }
         }
+
         private bool AddSelectedFilesRecursive(ProjectData node, List<string> selectedFiles)
         {
             CLIStatus status = DataManager.GetStatus();
@@ -822,7 +852,8 @@ namespace Anchorpoint.Editor
             return hasFileSelected;
         }
 
-        private void AddUncommittedParentFolders(ProjectData node, List<string> selectedFiles, Dictionary<string, string> notStagedFiles)
+        private void AddUncommittedParentFolders(ProjectData node, List<string> selectedFiles,
+            Dictionary<string, string> notStagedFiles)
         {
             if (node == null || string.IsNullOrEmpty(node.CommitPath))
             {
@@ -881,11 +912,11 @@ namespace Anchorpoint.Editor
         {
             processedFiles.Clear();
             hasMetaFile = false;
-            
+
             CLIStatus status = DataManager.GetStatus();
             int totalMetaFiles = 0;
             int totalNonMetaFiles = 0;
-            
+
             // Ensure projectPath is initialized
             if (string.IsNullOrEmpty(projectPath))
             {
@@ -894,12 +925,12 @@ namespace Anchorpoint.Editor
 
             if (status == null)
             {
-                return (0,0);
+                return (0, 0);
             }
 
             // Merge staged & not staged into a single dictionary
             Dictionary<string, string> merged = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            
+
             // Add staged files first
             if (status.Staged != null)
             {
@@ -931,7 +962,7 @@ namespace Anchorpoint.Editor
 
             foreach (var entry in merged)
             {
-                string filePath = entry.Key;    // e.g., "Assets/SomeFile.cs"
+                string filePath = entry.Key; // e.g., "Assets/SomeFile.cs"
                 string statusFlag = entry.Value;
                 string fullPath = Path.Combine(CLIConstants.WorkingDirectory, filePath);
 
@@ -945,8 +976,8 @@ namespace Anchorpoint.Editor
 
                 if (filePath.EndsWith(".meta"))
                 {
-                    hasMetaFile = true;     // The changed files contain meta file
-                    
+                    hasMetaFile = true; // The changed files contain meta file
+
                     // It's a .meta file
                     string baseFilePath = fullPath.Substring(0, fullPath.Length - 5); // remove ".meta"
 
@@ -971,26 +1002,28 @@ namespace Anchorpoint.Editor
 
             return (totalMetaFiles, totalNonMetaFiles);
         }
-        
+
         private void OnCommandOutputReceived(string output)
         {
             AnchorpointLogger.LogError(output);
-            
+
             EditorApplication.delayCall += () =>
             {
-
                 //prevent certain CLI outputs from being shown in the processing label
-                string[] ignoredOutputs = new string[] {"UserList", "Output:" };
-                if(ignoredOutputs.Any(ignored => output.Contains(ignored, StringComparison.OrdinalIgnoreCase)) || hasError){
+                string[] ignoredOutputs = new string[] { "UserList", "Output:" };
+                if (ignoredOutputs.Any(ignored => output.Contains(ignored, StringComparison.OrdinalIgnoreCase)) ||
+                    hasError)
+                {
                     return;
                 }
-                
+
                 // Handle errors explicitly
                 if (output.Contains("\"error\":"))
                 {
                     AnchorpointLogger.LogError("This condition is met for the error");
-                    
-                    Debug.LogError($"An issue has occurred. Check the Anchorpoint desktop application for more details.");
+
+                    Debug.LogError(
+                        $"An issue has occurred. Check the Anchorpoint desktop application for more details.");
 
                     processingTextLabel.text = output.Contains("canceled", StringComparison.OrdinalIgnoreCase)
                         ? "Push canceled"
@@ -1007,37 +1040,42 @@ namespace Anchorpoint.Editor
                 }
 
                 StartSpinnerAnimation();
-                if (output.Contains("Pushing git changes", StringComparison.OrdinalIgnoreCase)){
+                if (output.Contains("Pushing git changes", StringComparison.OrdinalIgnoreCase))
+                {
                     cacheProcessingLabel = "Pushing in the background...";
                     processingTextLabel.text = cacheProcessingLabel;
                     AnchorpointLogger.LogWarning("Pushing git changes");
                     CLIWrapper.isStatusQueuedAfterCommand = false;
                     AnchorpointEvents.inProgress = false;
                     CLIWrapper.Status();
-                }                
+                }
                 else if (output.Contains("Talking to Server", StringComparison.OrdinalIgnoreCase))
                 {
                     cacheProcessingLabel = "Talking to Server";
                     processingTextLabel.text = cacheProcessingLabel;
                     StartSpinnerAnimation();
                     SettingStateToNormal();
-                }      
-                
+                }
+
                 else if (output.Contains("Status Command Completed", StringComparison.OrdinalIgnoreCase))
-                {                    
-                    if(commandIncomplete){
+                {
+                    if (commandIncomplete)
+                    {
                         processingTextLabel.text = cacheProcessingLabel;
-                    }else{
+                    }
+                    else
+                    {
                         processingTextLabel.text = "";
                         StopSpinnerAnimation();
                     }
+
                     AnchorpointLogger.Log("Status Command Complete Called");
 
                     //CheckConflictedFiles();                    
                     RefreshView();
                     EditorCoroutineUtility.StartCoroutineOwnerless(DelayedExecution(textScreenTime));
-                }  
-                
+                }
+
                 else if (output.Contains("Revert Command Completed", StringComparison.OrdinalIgnoreCase))
                 {
                     processingTextLabel.style.color = EditorColors.GREEN;
@@ -1045,7 +1083,7 @@ namespace Anchorpoint.Editor
                     commandIncomplete = false;
                     SettingStateToNormal();
                     StopSpinnerAnimation();
-                    EditorCoroutineUtility.StartCoroutineOwnerless(DelayedStatus(textScreenTime-2f));
+                    EditorCoroutineUtility.StartCoroutineOwnerless(DelayedStatus(textScreenTime - 2f));
                     EditorCoroutineUtility.StartCoroutineOwnerless(DelayedExecution(textScreenTime));
                 }
                 else if (output.Contains("Sync Command Completed", StringComparison.OrdinalIgnoreCase))
@@ -1058,13 +1096,13 @@ namespace Anchorpoint.Editor
                     EditorCoroutineUtility.StartCoroutineOwnerless(DelayedExecution(textScreenTime));
                 }
                 else
-                {       
+                {
                     string trimmedOutput = output.Split('.')[0]
                         .Replace("{\"progress-text\": \"", "")
                         .Replace("\"}", "")
                         .Trim();
                     processingTextLabel.text = trimmedOutput;
-                }  
+                }
             };
         }
 
@@ -1076,7 +1114,7 @@ namespace Anchorpoint.Editor
             commitButton.SetEnabled(false);
             revertButton.SetEnabled(false);
         }
-        
+
         private void Update()
         {
             if (this.docked || this.hasFocus)
@@ -1088,38 +1126,52 @@ namespace Anchorpoint.Editor
         private void ShowConnectWindow()
         {
             AnchorpointLogger.Log("ShowConnectWindow Shown");
-            
+
             connectAnchorpointView.style.display = DisplayStyle.Flex;
+            checkingProjectStatusView.style.display = DisplayStyle.None;
             connectTryAgainView.style.display = DisplayStyle.None;
             connectedView.style.display = DisplayStyle.None;
             reconnectView.style.display = DisplayStyle.None;
-            
+
             //  Getting the Connect to Anchorpoint window
             descriptionConnectWin = root.Q<Label>("DescriptionConnectWindow");
             connectToAnchorpoint = root.Q<Button>("ConnectToAnchorpoint");
             helpConeectWindButton = root.Q<Button>("HelpConnectWindow");
-            
+
             connectToAnchorpoint.text = "Connect to Anchorpoint";
-            descriptionConnectWin.text = "Connect to Anchorpoint to commit and view the status of files from within Unity.";
-            
+            descriptionConnectWin.text =
+                "Connect to Anchorpoint to commit and view the status of files from within Unity.";
+
             connectToAnchorpoint.SetEnabled(true);
-            
+
             connectToAnchorpoint.clickable.clicked -= ConnectToAnchorPoint;
             helpConeectWindButton.clickable.clicked -= Help;
-            
+
             connectToAnchorpoint.clickable.clicked += ConnectToAnchorPoint;
             helpConeectWindButton.clickable.clicked += Help;
         }
-        
+
+        private void ShowCheckingProjectStatus()
+        {
+            AnchorpointLogger.Log("ShowCheckingProjectStatus Shown");
+
+            connectAnchorpointView.style.display = DisplayStyle.None;
+            checkingProjectStatusView.style.display = DisplayStyle.Flex;
+            connectTryAgainView.style.display = DisplayStyle.None;
+            connectedView.style.display = DisplayStyle.None;
+            reconnectView.style.display = DisplayStyle.None;
+        }
+
         private void ShowNoProjectError()
         {
             AnchorpointLogger.Log("ShowNoProjectError Shown");
-            
+
             connectAnchorpointView.style.display = DisplayStyle.None;
+            checkingProjectStatusView.style.display = DisplayStyle.None;
             connectTryAgainView.style.display = DisplayStyle.Flex;
             connectedView.style.display = DisplayStyle.None;
             reconnectView.style.display = DisplayStyle.None;
-            
+
             descriptionTryAgainWin = root.Q<Label>("DescriptionTryAgainWindow");
             trAgainAnchorpointButton = root.Q<Button>("TryAgain");
             openAnchorpointButton = root.Q<Button>("OpenAnchorpoint");
@@ -1130,27 +1182,28 @@ namespace Anchorpoint.Editor
             trAgainAnchorpointButton.clickable.clicked -= PluginInitializer.StartConnection;
             openAnchorpointButton.clickable.clicked -= AnchorpointChecker.OpenAnchorpointApplication;
             helpTryAgainWindowButton.clickable.clicked -= Help;
-           
-            trAgainAnchorpointButton.clickable.clicked += PluginInitializer.StartConnection;
+
+            trAgainAnchorpointButton.clickable.clicked += PluginInitializer.TryAgainConnection;
             openAnchorpointButton.clickable.clicked += AnchorpointChecker.OpenAnchorpointApplication;
             helpTryAgainWindowButton.clickable.clicked += Help;
         }
-        
+
         private void ShowConnectedWindow()
         {
             connectAnchorpointView.style.display = DisplayStyle.None;
+            checkingProjectStatusView.style.display = DisplayStyle.None;
             connectTryAgainView.style.display = DisplayStyle.None;
             connectedView.style.display = DisplayStyle.Flex;
             reconnectView.style.display = DisplayStyle.None;
-            
+
             // Get the commit message text field and commit button
             commitMessageField = root.Q<TextField>("CommitMessageField");
-            
+
             connectedOpenAnchorpointButton = root.Q<Button>("ConnectedOpenAnchorpoint");
             connectedOpenAnchorpointButton.clickable.clicked -= AnchorpointChecker.OpenAnchorpointApplication;
             connectedOpenAnchorpointButton.style.display = DisplayStyle.None;
             connectedOpenAnchorpointButton.clickable.clicked += AnchorpointChecker.OpenAnchorpointApplication;
-            
+
             commitButton = root.Q<Button>("CommitButton");
             commitButton.SetEnabled(false); // Disable the commit button initially
             revertButton = root.Q<Button>("Revert");
@@ -1162,28 +1215,31 @@ namespace Anchorpoint.Editor
 
             refreshButton = root.Q<Button>("Refresh");
             refreshButtonIcon = root.Q<VisualElement>("RefreshImg");
-            refreshButtonIcon.style.unityBackgroundImageTintColor = PluginInitializer.IsProjectOpen ? new Color(1, 1, 1) : EditorColors.YELLOW;  // #ffffff when open, yellow when not 
+            refreshButtonIcon.style.unityBackgroundImageTintColor =
+                PluginInitializer.IsProjectOpen
+                    ? new Color(1, 1, 1)
+                    : EditorColors.YELLOW; // #ffffff when open, yellow when not 
 
             loadingImg = root.Q<VisualElement>("LoadingImg");
             refreshImg = root.Q<VisualElement>("RefreshImg");
-            
+
             disconnectButton = root.Q<Button>("Disconnect");
             helpConnectedWinButton = root.Q<Button>("ConnectedHelp");
-            
+
             changesLabel = root.Q<Label>("ChangeCountLabel");
 
             allButton = root.Q<Button>("AllButton");
             noneButton = root.Q<Button>("NoneButton");
-            
+
             emptyTreeDescriptionLabel = root.Q<Label>("EmptyTreeDescription");
             treeView = root.Q<TreeView>("TreeView");
-            
+
             onlyMetafilesDescriptionLabel = root.Q<Label>("OnlyMetafilesDescription");
             onlyMetafilesDescriptionLabel.style.display = DisplayStyle.None;
-            
+
             (int totalMetaFiles, int totalNonMetaFiles) = CalculateTotalChanges();
             int totalChanges = totalMetaFiles + totalNonMetaFiles;
-          
+
             if (totalChanges == 0)
             {
                 changesLabel.text = " No changed files";
@@ -1192,32 +1248,33 @@ namespace Anchorpoint.Editor
             {
                 changesLabel.text = "One changed file (without meta files)";
             }
-            else if(totalMetaFiles > 0 && totalNonMetaFiles == 0)       // Condition where there are only metafiles
+            else if (totalMetaFiles > 0 && totalNonMetaFiles == 0) // Condition where there are only metafiles
             {
-                changesLabel.text = totalMetaFiles + " " + (totalMetaFiles > 1 ? "metafiles" : "metafile") + " modified";
+                changesLabel.text = totalMetaFiles + " " + (totalMetaFiles > 1 ? "metafiles" : "metafile") +
+                                    " modified";
                 onlyMetafilesDescriptionLabel.style.display = DisplayStyle.Flex;
             }
-            else if(hasMetaFile)
+            else if (hasMetaFile)
             {
                 changesLabel.text = $"{totalNonMetaFiles} changed files (without meta files)";
             }
             else
             {
-                changesLabel.text =  $"{totalChanges} changed files";
+                changesLabel.text = $"{totalChanges} changed files";
             }
 
             emptyTreeDescriptionLabel.style.display = totalChanges == 0 ? DisplayStyle.Flex : DisplayStyle.None;
             treeView.style.display = totalChanges == 0 ? DisplayStyle.None : DisplayStyle.Flex;
-            
+
             noticeLable = root.Q<Label>("Notice");
             noticeLable.style.display = PluginInitializer.IsProjectOpen ? DisplayStyle.None : DisplayStyle.Flex;
-            
+
             conflictLable = root.Q<Label>("ConflictNotice");
             conflictLable.style.display = DisplayStyle.None;
-            
+
             editWarningLabel = root.Q<Label>("EditWarningLabel");
             editWarningLabel.style.opacity = 0;
-            
+
             // Register callback to track changes in the commit message field
             commitMessageField.RegisterValueChangedCallback(evt =>
             {
@@ -1225,7 +1282,7 @@ namespace Anchorpoint.Editor
                 // and at least one file is selected for commit.
                 commitButton.SetEnabled(!string.IsNullOrWhiteSpace(evt.newValue) && IsAnyFileSelected());
             });
-            
+
             // When the commit button is clicked, gather selected files and commit them
             commitButton.clickable.clicked += () =>
             {
@@ -1234,9 +1291,10 @@ namespace Anchorpoint.Editor
                     RefreshView();
                     return;
                 }
+
                 string commitMessage = commitMessageField.value;
                 List<string> filesToCommit = GetSelectedFiles();
-                
+
                 if (IsAnyFileSelected())
                 {
                     inProcess = true;
@@ -1253,7 +1311,7 @@ namespace Anchorpoint.Editor
                     AnchorpointLogger.LogWarning("No files selected for commit.");
                 }
             };
-            
+
             revertButton.clickable.clicked += () =>
             {
                 if (!PluginInitializer.IsConnected)
@@ -1261,9 +1319,9 @@ namespace Anchorpoint.Editor
                     RefreshView();
                     return;
                 }
-                
+
                 List<string> filesToRevert = GetSelectedFiles();
-                
+
                 if (IsAnyFileSelected())
                 {
                     inProcess = true;
@@ -1283,37 +1341,39 @@ namespace Anchorpoint.Editor
 
             loadingImg.style.display = DisplayStyle.None;
             refreshImg.style.display = DisplayStyle.Flex;
-            
+
             allButton.clickable.clicked += () => { SetAllCheckboxes(true); };
             noneButton.clickable.clicked += () => { SetAllCheckboxes(false); };
-            
+
             refreshButton.clickable.clicked -= Refresh;
             disconnectButton.clickable.clicked -= Disconnect;
             helpConnectedWinButton.clickable.clicked -= Help;
-            
+
             refreshButton.clickable.clicked += Refresh;
             disconnectButton.clickable.clicked += Disconnect;
             helpConnectedWinButton.clickable.clicked += Help;
-            
+
             CreateTreeUnity(treeView);
         }
 
         private void ShowReconnectWindow()
         {
             AnchorpointLogger.Log("ShowReconnectWindow Shown");
-            
+
             connectAnchorpointView.style.display = DisplayStyle.None;
+            checkingProjectStatusView.style.display = DisplayStyle.None;
             connectTryAgainView.style.display = DisplayStyle.None;
             connectedView.style.display = DisplayStyle.None;
             reconnectView.style.display = DisplayStyle.Flex;
-            
+
             reConnectToAnchorpoint = root.Q<Button>("ReconnectToAnchorpoint");
-            
+
             reConnectToAnchorpoint.SetEnabled(true);
-            
+
             reConnectToAnchorpoint.clickable.clicked -= PluginInitializer.StartConnection;
-            reConnectToAnchorpoint.clickable.clicked += () => {
-                PluginInitializer.StartConnection();
+            reConnectToAnchorpoint.clickable.clicked += () =>
+            {
+                PluginInitializer.TryAgainConnection();
                 reConnectToAnchorpoint.SetEnabled(false);
             };
         }
@@ -1324,11 +1384,11 @@ namespace Anchorpoint.Editor
             refreshImg.style.display = DisplayStyle.None;
             CLIWrapper.Status();
             ChangingUIInProgress(false);
-            ChangingIndRefreshButton(false);   
-            
+            ChangingIndRefreshButton(false);
+
             // In case the state is holding previous values (e.g. due to pushing the progress), clear it
             commandIncomplete = false;
-            cacheProcessingLabel = "";         
+            cacheProcessingLabel = "";
         }
 
         private void Disconnect()
@@ -1341,7 +1401,7 @@ namespace Anchorpoint.Editor
         {
             Application.OpenURL(helpUrl);
         }
-        
+
         private void ConnectToAnchorPoint()
         {
             AnchorpointLogger.Log("ConnectToAnchorPoint");
@@ -1369,12 +1429,12 @@ namespace Anchorpoint.Editor
             {
                 return true;
             }
-            
+
             descriptionConnectWin.text = validatingDescription;
-            
+
             return false;
         }
-        
+
         private void ChangingUIInProgress(bool flag)
         {
             allButton.SetEnabled(flag);
@@ -1387,10 +1447,11 @@ namespace Anchorpoint.Editor
             {
                 editWarningLabel.style.opacity = flag ? 0 : 1;
             }
+
             treeView.style.opacity = flag ? 1 : 0.3f;
             treeView.SetEnabled(flag);
         }
-        
+
         private void ChangingIndRefreshButton(bool flag)
         {
             refreshButton.SetEnabled(flag);
@@ -1398,21 +1459,22 @@ namespace Anchorpoint.Editor
 
         IEnumerator DelayedExecution(float delayInSeconds)
         {
-            yield return new EditorWaitForSeconds(delayInSeconds); 
+            yield return new EditorWaitForSeconds(delayInSeconds);
             processingTextLabel.style.color = Color.white;
-            processingTextLabel.text = "";            
+            processingTextLabel.text = "";
             hasError = false;
         }
+
         IEnumerator DelayedStatus(float delayInSeconds)
         {
             yield return new EditorWaitForSeconds(delayInSeconds);
             CLIWrapper.Status();
         }
-        
+
         private void CheckConflictedFiles()
         {
             CLIStatus status = DataManager.GetStatus();
-            
+
             if (status == null)
             {
                 return;
@@ -1425,7 +1487,7 @@ namespace Anchorpoint.Editor
             {
                 foreach (var fileStatus in status.Staged.Values)
                 {
-                    if(fileStatus == "C") hasConflict = true;
+                    if (fileStatus == "C") hasConflict = true;
                 }
             }
 
@@ -1434,10 +1496,10 @@ namespace Anchorpoint.Editor
             {
                 foreach (var fileStatus in status.NotStaged.Values)
                 {
-                    if(fileStatus == "C") hasConflict = true;
+                    if (fileStatus == "C") hasConflict = true;
                 }
             }
-            
+
             if (hasConflict)
             {
                 ChangingUIInProgress(false);
@@ -1454,7 +1516,7 @@ namespace Anchorpoint.Editor
                 SettingStateToNormal();
             }
         }
-        
+
         private void StartSpinnerAnimation()
         {
             if (spinnerImg == null)
@@ -1462,15 +1524,15 @@ namespace Anchorpoint.Editor
                 AnchorpointLogger.LogError("Spinner image not found!");
                 return;
             }
-            
+
             spinnerImg.style.display = DisplayStyle.Flex;
-            
+
             if (gifFrames.Count == 0)
             {
                 // Load frames from folder
                 LoadGifFrames("Packages/com.anchorpoint.sourcecontrol/Editor/Anchorpoint/UI/Spinner");
             }
-            
+
             // Start animation loop
             EditorApplication.update += UpdateGifAnimation;
         }

@@ -19,13 +19,16 @@ namespace Anchorpoint.Wrapper
         private static ConnectCommandHandler connectHandler;
         public static bool IsInitialized => connectHandler != null;
         public static bool IsConnected => connectHandler?.IsConnected() ?? false;
-        public static bool IsNotAnchorpointProject { get; private set; } = true;
+        public static bool IsNotAnchorpointProject { get; private set; } = false;
+        public static bool IsCheckingProjectStatus { get; private set; } = true;
         public static bool IsProjectOpen { get; private set; }
         public static bool IsPlaymode { get; private set; }
-        
+
         private const string WasConnectedKey = "Anchorpoint_WasConnected";
         private const double connectionCheckInterval = 30f;
+        private const double projectStatusCheckTimeout = 60f;
         private static double lastConnectionCheckTime;
+        private static double projectStatusCheckStartTime;
 
         public static bool WasConnected
         {
@@ -46,6 +49,7 @@ namespace Anchorpoint.Wrapper
             AssemblyReloadEvents.afterAssemblyReload += AfterAssemblyReload;
             EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
             EditorApplication.update += PeriodicConnectionCheck;
+            EditorApplication.update += CheckProjectStatusTimeout;
         }
 
         private static void Initialize()
@@ -57,11 +61,17 @@ namespace Anchorpoint.Wrapper
                 AnchorpointLogger.LogError("Compilation errors detected. Disabling Anchorpoint.");
                 return;
             }
-            
+
             if (connectHandler == null)
             {
                 connectHandler = new ConnectCommandHandler();
                 AnchorpointEvents.OnMessageReceived += OnConnectMessageReceived;
+
+                // Automatically start checking project status when plugin initializes
+                if (!IsPlaymode)
+                {
+                    StartConnection();
+                }
             }
         }
 
@@ -88,8 +98,22 @@ namespace Anchorpoint.Wrapper
         {
             // Sets the connected state and initiates the CLI connection.
             WasConnected = true;
+            if (IsCheckingProjectStatus)
+            {
+                projectStatusCheckStartTime = EditorApplication.timeSinceStartup;
+            }
             connectHandler?.StartConnect();
             AnchorpointLogger.Log("Starting Connection");
+        }
+
+        public static void TryAgainConnection()
+        {
+            // Reset states for trying again
+            IsNotAnchorpointProject = false;
+            IsCheckingProjectStatus = true;
+            projectStatusCheckStartTime = EditorApplication.timeSinceStartup;
+            AnchorpointEvents.RaiseRefreshView();
+            StartConnection();
         }
 
         private static void StopConnection()
@@ -123,6 +147,7 @@ namespace Anchorpoint.Wrapper
         private static void SetNoProjectState(bool flag)
         {
             IsNotAnchorpointProject = flag;
+            IsCheckingProjectStatus = false;
             if (flag)
             {
                 StopConnection();
@@ -139,7 +164,7 @@ namespace Anchorpoint.Wrapper
             // Processes messages received from Anchorpoint CLI and updates project state accordingly.
             FetchCurrentUser();
             AnchorpointLogger.LogWarning($"Message type {message.type}");
-            
+
             switch (message.type)
             {
                 case "files locked":
@@ -161,6 +186,7 @@ namespace Anchorpoint.Wrapper
                     SetNoProjectState(false);
                     break;
                 case "project dirty":
+                    SetNoProjectState(false);
                     CLIWrapper.Status();
                     break;
                 case "":
@@ -173,7 +199,7 @@ namespace Anchorpoint.Wrapper
 
             AnchorpointEvents.RaiseRefreshView();
         }
-        
+
         private static void FetchCurrentUser()
         {
             // Fetch current user from CLI if not cached already.
@@ -182,7 +208,7 @@ namespace Anchorpoint.Wrapper
                 CLIWrapper.GetCurrentUser();
             }
         }
-        
+
         private static bool HasCompilationErrors()
         {
             // Reads the last few lines of Editor.log to detect compile-time errors.
@@ -214,7 +240,7 @@ namespace Anchorpoint.Wrapper
                 return false; // Assume no errors if we can't read the file
             }
         }
-        
+
         private static void PeriodicConnectionCheck()
         {
             // Periodically checks if Unity is disconnected and tries to reconnect if necessary.
@@ -234,7 +260,22 @@ namespace Anchorpoint.Wrapper
                 }
             }
         }
-        
+
+        private static void CheckProjectStatusTimeout()
+        {
+            // Check if we've been in checking status too long
+            if (IsCheckingProjectStatus && projectStatusCheckStartTime > 0)
+            {
+                double currentTime = EditorApplication.timeSinceStartup;
+                if (currentTime - projectStatusCheckStartTime >= projectStatusCheckTimeout)
+                {
+                    AnchorpointLogger.LogWarning("Project status check timed out. Assuming no Anchorpoint project.");
+                    SetNoProjectState(true);
+                    AnchorpointEvents.RaiseRefreshView();
+                }
+            }
+        }
+
         private static string GetEditorLogPath()
         {
             string editorLogPath = "";
