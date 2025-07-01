@@ -1,3 +1,7 @@
+# 1.0.2
+
+Add loading screen for startup state
+
 # 1.0.1
 
 Updating the license and preparing the package for FAB.
@@ -23,4 +27,3 @@ Initial version of the plugin, including connection to the Anchorpoint desktop a
 - Disable the UI when committing and reverting
 - Keep the refresh button enabled all the time
 - Refresh Anchorpoint UI after a solved conflict state
-
