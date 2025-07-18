@@ -1,3 +1,7 @@
+# 1.0.3
+
+- Refresh opened scene or prefab after a revert
+
 # 1.0.2
 
 Add loading screen for startup state

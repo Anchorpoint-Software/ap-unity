@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using Anchorpoint.Constants;
 using Anchorpoint.Events;
 using Anchorpoint.Logger;
@@ -12,6 +13,8 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
 using Unity.EditorCoroutines.Editor;
+using UnityEditor.SceneManagement;
+using UnityEngine.SceneManagement;
 
 namespace Anchorpoint.Editor
 {
@@ -1331,7 +1334,7 @@ namespace Anchorpoint.Editor
                     ChangingUIInProgress(false);
                     processingTextLabel.text = "Reverting…";
                     StartSpinnerAnimation();
-                    CLIWrapper.Revert(filesToRevert.ToArray());
+                    CLIWrapper.Revert(RefreshOpenedViews, filesToRevert.ToArray());
                 }
                 else
                 {
@@ -1354,6 +1357,29 @@ namespace Anchorpoint.Editor
             helpConnectedWinButton.clickable.clicked += Help;
 
             CreateTreeUnity(treeView);
+        }
+
+        private void RefreshOpenedViews()
+        {
+            // Move to main thread
+            EditorApplication.delayCall += () =>
+            {
+                AssetDatabase.Refresh();
+
+                // Try refresh opened prefab
+                var openedPrefab = PrefabStageUtility.GetCurrentPrefabStage();
+                if (openedPrefab != null)
+                {
+                    AnchorpointLogger.Log("Refreshing opened prefab");
+                    AssetDatabase.OpenAsset(PrefabStageUtility.GetCurrentPrefabStage());
+                    return; // Exit after refreshing prefab
+                }
+
+                // Try refresh opened scene
+                var currentScene = SceneManager.GetActiveScene();
+                AnchorpointLogger.Log($"Refreshing opened scene: {currentScene}");
+                EditorSceneManager.OpenScene(currentScene.path);
+            };
         }
 
         private void ShowReconnectWindow()

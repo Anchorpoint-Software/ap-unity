@@ -27,9 +27,9 @@ namespace Anchorpoint.Wrapper
         public static bool isStatusQueuedAfterCommand = false;  // Track when Status should be queued
         private static bool isRefreshing = false;                // Flag for refresh control
         private static readonly Queue<Action> refreshQueue = new Queue<Action>();  // Queue to manage refresh actions
-        
+
         public static bool isWindowActive = false;
-        
+
         // Logs the CLI executable path used by Anchorpoint
         public static void CLIPath() => AnchorpointLogger.Log(CLIConstants.CLIPath);
 
@@ -53,11 +53,11 @@ namespace Anchorpoint.Wrapper
                 {
                     RunCommand(Command.Status, CLIConstants.Status);
                 })
-                { IsBackground = true };
+            { IsBackground = true };
 
             statusThread.Start();
         }
-        
+
         public static void GetCurrentUser()
         {
             EditorApplication.update += RunUserListCommandOnMainThread;
@@ -103,7 +103,7 @@ namespace Anchorpoint.Wrapper
         }
 
         public static void Push() => EnqueueCommand(Command.Push, CLIConstants.Push, true);
-        
+
         public static void SyncAll(string message)
         {
             if (string.IsNullOrEmpty(message))
@@ -127,13 +127,13 @@ namespace Anchorpoint.Wrapper
                 AddOutput($"\n\n<color=red>Commit Message empty!</color>");
                 message = "Commit Message empty!";
             }
-            
+
             EnqueueCommand(Command.Sync, CLIConstants.SyncFiles(message, files), true);
         }
-        
-        public static void Revert(params string[] files)
+
+        public static void Revert(Callback callback = null, params string[] files)
         {
-            EnqueueCommand(Command.Revert, CLIConstants.RevertFiles(files), true);
+            EnqueueCommand(Command.Revert, CLIConstants.RevertFiles(files), true, callback);
         }
 
         // public static void LockList() => EnqueueCommand(Command.LockList, CLIConstants.LockList);
@@ -180,7 +180,7 @@ namespace Anchorpoint.Wrapper
                     AnchorpointLogger.Log("No files to Unlock!");
             });
         }
-        
+
         public static Dictionary<string, string> GetLockedFiles()
         {
             return DataManager.GetLockList();
@@ -206,7 +206,7 @@ namespace Anchorpoint.Wrapper
             Output = string.Empty;
             AnchorpointLogger.Log($"Running Command: {commandText}");
             AddOutput($"<color=green>Running Command: {commandText}</color>");
-            
+
             // Prepare and launch the CLI process with appropriate command arguments
             try
             {
@@ -229,7 +229,7 @@ namespace Anchorpoint.Wrapper
 
                 using Process process = new() { StartInfo = startInfo };
                 process.Start();
-                
+
                 // Decide between async (sequential) and sync error reading
                 if (sequential)
                 {
@@ -260,6 +260,11 @@ namespace Anchorpoint.Wrapper
                 AnchorpointLogger.Log($"{command} Command Completed");
                 AnchorpointEvents.RaiseCommandOutputReceived($"{command} Command Completed");
                 AddOutput($"\n\n{command} Command Completed");
+                
+                if (sequential)
+                {
+                    callback?.Invoke();
+                }
 
                 QueueRefresh(command);  // Handle RefreshWindow logic here
             }
@@ -319,7 +324,7 @@ namespace Anchorpoint.Wrapper
 
         // Parses the structured JSON output returned by the CLI based on the command type
         private static void ProcessOutput(Command command, string jsonOutput, Callback callback)
-        {            
+        {
             if (jsonOutput.Contains("\"error\":\"No Project\""))
             {
                 AnchorpointLogger.LogError("No project found on Anchorpoint");
