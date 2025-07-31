@@ -86,11 +86,13 @@ namespace Anchorpoint.Wrapper
                     // Reconnect automatically if we were previously connected
                     StartConnection();
                 }
+                AnchorpointEvents.RaiseRefreshView();
             }
             else if (state == PlayModeStateChange.EnteredPlayMode)
             {
                 IsPlaymode = true;
                 StopConnection();
+                AnchorpointEvents.RaiseRefreshView();
             }
         }
 

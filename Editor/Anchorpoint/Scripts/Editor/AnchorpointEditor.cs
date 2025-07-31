@@ -44,6 +44,7 @@ namespace Anchorpoint.Editor
         private VisualElement connectTryAgainView;
         private VisualElement connectedView;
         private VisualElement reconnectView;
+        private VisualElement playModeView;
         private VisualElement root;
 
         private List<TreeViewItemData<ProjectData>> treeViewItems = new List<TreeViewItemData<ProjectData>>();
@@ -119,7 +120,7 @@ namespace Anchorpoint.Editor
             AnchorpointEvents.RefreshTreeWindow +=
                 OnEditorUpdate; //  Is triggered in QueueRefresh after Status command is executed
             AnchorpointEvents.OnCommandOutputReceived += OnCommandOutputReceived;
-            
+
             // Is triggered in Plugin Initializer after HandleConnectMessage. To change the windows view form Connected/ConnectToAnchorpoint/PauseAnchorpoint/TryAgain
             AnchorpointEvents.RefreshView += RefreshView;
         }
@@ -164,13 +165,25 @@ namespace Anchorpoint.Editor
             connectTryAgainView = root.Q<VisualElement>("ConnectTryAgain");
             connectedView = root.Q<VisualElement>("Connected");
             reconnectView = root.Q<VisualElement>("PauseAnchorpoint");
+            playModeView = root.Q<VisualElement>("PlayModeAnchorpoint");
 
             RefreshView();
         }
 
         private void RefreshView()
         {
-            if (PluginInitializer.IsCheckingProjectStatus)
+            // Don't refresh view if UI elements are not initialized yet
+            if (root == null)
+            {
+                AnchorpointLogger.LogWarning("RefreshView called before UI initialization");
+                return;
+            }
+
+            if (PluginInitializer.IsPlaymode)
+            {
+                ShowPlayModeWindow();
+            }
+            else if (PluginInitializer.IsCheckingProjectStatus)
             {
                 ShowCheckingProjectStatus();
             }
@@ -183,10 +196,6 @@ namespace Anchorpoint.Editor
                 ShowConnectedWindow();
                 CheckConflictedFiles();
                 showCachedProcessingLabel();
-            }
-            else if (PluginInitializer.IsPlaymode && PluginInitializer.WasConnected)
-            {
-                ShowReconnectWindow();
             }
             else
             {
@@ -1130,11 +1139,19 @@ namespace Anchorpoint.Editor
         {
             AnchorpointLogger.Log("ShowConnectWindow Shown");
 
+            // Check if UI elements are initialized
+            if (root == null || connectAnchorpointView == null)
+            {
+                AnchorpointLogger.LogWarning("UI elements not initialized yet in ShowConnectWindow");
+                return;
+            }
+
             connectAnchorpointView.style.display = DisplayStyle.Flex;
             checkingProjectStatusView.style.display = DisplayStyle.None;
             connectTryAgainView.style.display = DisplayStyle.None;
             connectedView.style.display = DisplayStyle.None;
             reconnectView.style.display = DisplayStyle.None;
+            playModeView.style.display = DisplayStyle.None;
 
             //  Getting the Connect to Anchorpoint window
             descriptionConnectWin = root.Q<Label>("DescriptionConnectWindow");
@@ -1158,22 +1175,38 @@ namespace Anchorpoint.Editor
         {
             AnchorpointLogger.Log("ShowCheckingProjectStatus Shown");
 
+            // Check if UI elements are initialized
+            if (root == null || checkingProjectStatusView == null)
+            {
+                AnchorpointLogger.LogWarning("UI elements not initialized yet in ShowCheckingProjectStatus");
+                return;
+            }
+
             connectAnchorpointView.style.display = DisplayStyle.None;
             checkingProjectStatusView.style.display = DisplayStyle.Flex;
             connectTryAgainView.style.display = DisplayStyle.None;
             connectedView.style.display = DisplayStyle.None;
             reconnectView.style.display = DisplayStyle.None;
+            playModeView.style.display = DisplayStyle.None;
         }
 
         private void ShowNoProjectError()
         {
             AnchorpointLogger.Log("ShowNoProjectError Shown");
 
+            // Check if UI elements are initialized
+            if (root == null || connectTryAgainView == null)
+            {
+                AnchorpointLogger.LogWarning("UI elements not initialized yet in ShowNoProjectError");
+                return;
+            }
+
             connectAnchorpointView.style.display = DisplayStyle.None;
             checkingProjectStatusView.style.display = DisplayStyle.None;
             connectTryAgainView.style.display = DisplayStyle.Flex;
             connectedView.style.display = DisplayStyle.None;
             reconnectView.style.display = DisplayStyle.None;
+            playModeView.style.display = DisplayStyle.None;
 
             descriptionTryAgainWin = root.Q<Label>("DescriptionTryAgainWindow");
             trAgainAnchorpointButton = root.Q<Button>("TryAgain");
@@ -1193,11 +1226,19 @@ namespace Anchorpoint.Editor
 
         private void ShowConnectedWindow()
         {
+            // Check if UI elements are initialized
+            if (root == null || connectedView == null)
+            {
+                AnchorpointLogger.LogWarning("UI elements not initialized yet in ShowConnectedWindow");
+                return;
+            }
+
             connectAnchorpointView.style.display = DisplayStyle.None;
             checkingProjectStatusView.style.display = DisplayStyle.None;
             connectTryAgainView.style.display = DisplayStyle.None;
             connectedView.style.display = DisplayStyle.Flex;
             reconnectView.style.display = DisplayStyle.None;
+            playModeView.style.display = DisplayStyle.None;
 
             // Get the commit message text field and commit button
             commitMessageField = root.Q<TextField>("CommitMessageField");
@@ -1386,11 +1427,19 @@ namespace Anchorpoint.Editor
         {
             AnchorpointLogger.Log("ShowReconnectWindow Shown");
 
+            // Check if UI elements are initialized
+            if (root == null || reconnectView == null)
+            {
+                AnchorpointLogger.LogWarning("UI elements not initialized yet in ShowReconnectWindow");
+                return;
+            }
+
             connectAnchorpointView.style.display = DisplayStyle.None;
             checkingProjectStatusView.style.display = DisplayStyle.None;
             connectTryAgainView.style.display = DisplayStyle.None;
             connectedView.style.display = DisplayStyle.None;
             reconnectView.style.display = DisplayStyle.Flex;
+            playModeView.style.display = DisplayStyle.None;
 
             reConnectToAnchorpoint = root.Q<Button>("ReconnectToAnchorpoint");
 
@@ -1402,6 +1451,25 @@ namespace Anchorpoint.Editor
                 PluginInitializer.TryAgainConnection();
                 reConnectToAnchorpoint.SetEnabled(false);
             };
+        }
+
+        private void ShowPlayModeWindow()
+        {
+            AnchorpointLogger.Log("ShowPlayModeWindow Shown");
+
+            // Check if UI elements are initialized
+            if (root == null || playModeView == null)
+            {
+                AnchorpointLogger.LogWarning("UI elements not initialized yet in ShowPlayModeWindow");
+                return;
+            }
+
+            connectAnchorpointView.style.display = DisplayStyle.None;
+            checkingProjectStatusView.style.display = DisplayStyle.None;
+            connectTryAgainView.style.display = DisplayStyle.None;
+            connectedView.style.display = DisplayStyle.None;
+            reconnectView.style.display = DisplayStyle.None;
+            playModeView.style.display = DisplayStyle.Flex;
         }
 
         private void Refresh()
