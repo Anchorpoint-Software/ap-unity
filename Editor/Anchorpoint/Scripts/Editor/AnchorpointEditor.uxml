@@ -72,4 +72,9 @@
             </ui:VisualElement>
         </ui:VisualElement>
     </ui:VisualElement>
+    <ui:VisualElement name="PlayModeAnchorpoint" style="flex-grow: 1; align-self: center; justify-content: center; display: flex; visibility: visible; align-items: center; flex-direction: column; flex-wrap: nowrap; margin-top: 0; margin-right: 0; margin-bottom: 0; margin-left: 0; overflow: visible;">
+        <ui:VisualElement style="align-items: center; justify-content: space-around; align-self: auto; top: 100px;">
+            <ui:Label tabindex="-1" text="Unity is in Play Mode.\n\nDisable Play Mode to view your file changes." parse-escape-sequences="true" display-tooltip-when-elided="true" name="DescriptionPlayModeWindow" focusable="false" style="margin-left: 0; padding-left: 0; padding-bottom: 0; padding-right: 0; padding-top: 0; margin-top: 0; margin-right: 0; margin-bottom: 0; width: 392px; height: 80px; font-size: 13px; -unity-text-align: middle-center; white-space: normal; text-overflow: clip;" />
+        </ui:VisualElement>
+    </ui:VisualElement>
 </ui:UXML>

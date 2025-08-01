@@ -1,3 +1,7 @@
+# 1.0.4
+
+- Add a warning about the Play Mode
+
 # 1.0.3
 
 - Refresh opened scene or prefab after a revert
