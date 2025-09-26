@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -17,6 +18,7 @@ namespace Anchorpoint.Wrapper
     public static class PluginInitializer
     {
         private static ConnectCommandHandler connectHandler;
+        private static readonly object handlerLock = new object();
         public static bool IsInitialized => connectHandler != null;
         public static bool IsConnected => connectHandler?.IsConnected() ?? false;
         public static bool IsNotAnchorpointProject { get; private set; } = false;
@@ -54,23 +56,29 @@ namespace Anchorpoint.Wrapper
 
         private static void Initialize()
         {
-            // Initializes the connect handler and subscribes to Anchorpoint connection messages.
-            if (HasCompilationErrors())
+            lock (handlerLock)
             {
-                StopConnection();
-                AnchorpointLogger.LogError("Compilation errors detected. Disabling Anchorpoint.");
-                return;
-            }
-
-            if (connectHandler == null)
-            {
-                connectHandler = new ConnectCommandHandler();
-                AnchorpointEvents.OnMessageReceived += OnConnectMessageReceived;
-
-                // Automatically start checking project status when plugin initializes
-                if (!IsPlaymode)
+                // Initializes the connect handler and subscribes to Anchorpoint connection messages.
+                if (HasCompilationErrors())
                 {
-                    StartConnection();
+                    StopConnection();
+                    AnchorpointLogger.LogError("Compilation errors detected. Disabling Anchorpoint.");
+                    return;
+                }
+
+                if (connectHandler == null)
+                {
+                    // Ensure any tracked processes are cleaned up before creating new handler
+                    ProcessTracker.KillTrackedProcesses();
+                    
+                    connectHandler = new ConnectCommandHandler();
+                    AnchorpointEvents.OnMessageReceived += OnConnectMessageReceived;
+
+                    // Automatically start checking project status when plugin initializes
+                    if (!IsPlaymode)
+                    {
+                        StartConnection();
+                    }
                 }
             }
         }
@@ -120,9 +128,12 @@ namespace Anchorpoint.Wrapper
 
         private static void StopConnection()
         {
-            // Stops the CLI connection and logs the action.
-            connectHandler?.StopConnect();
-            AnchorpointLogger.Log("Connection stopped");
+            lock (handlerLock)
+            {
+                // Stops the CLI connection and logs the action.
+                connectHandler?.StopConnect();
+                AnchorpointLogger.Log("Connection stopped");
+            }
         }
 
         public static void StopConnectionExt()
@@ -133,17 +144,31 @@ namespace Anchorpoint.Wrapper
 
         private static void OnBeforeAssemblyReload()
         {
+            AnchorpointLogger.Log("Domain reload starting - cleaning up connections");
+            
             StopConnection();
+            
+            // Kill any tracked ap processes before stopping our connection
+            ProcessTracker.KillTrackedProcesses();
+            
+            // Give extra time for cleanup during domain reload
+            System.Threading.Thread.Sleep(500);
         }
 
         private static void AfterAssemblyReload()
         {
-            // Reconnect after Unity assembly reload if conditions are met.
-            if (!IsConnected && WasConnected && !IsPlaymode)
+            AnchorpointLogger.Log("Domain reload completed - checking reconnection");
+            
+            // Small delay to ensure any remaining processes have time to clean up
+            EditorApplication.delayCall += () =>
             {
-                Initialize();
-                StartConnection();
-            }
+                // Reconnect after Unity assembly reload if conditions are met.
+                if (!IsConnected && WasConnected && !IsPlaymode)
+                {
+                    Initialize();
+                    StartConnection();
+                }
+            };
         }
 
         private static void SetNoProjectState(bool flag)
