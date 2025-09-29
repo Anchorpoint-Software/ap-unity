@@ -21,6 +21,7 @@ namespace Anchorpoint.Wrapper
         private Thread connectThread;
         private volatile bool isRunning;
         private bool previousConnectionState;
+        private static readonly object processLock = new object();
         
         // Queue to pass CLI messages from the background thread to the main Unity thread.
         private static readonly Queue<Action> mainThreadActions = new Queue<Action>();
@@ -32,50 +33,110 @@ namespace Anchorpoint.Wrapper
         // Starts the background thread to establish and maintain connection with Anchorpoint CLI.
         public void StartConnect()
         {
-            if (isRunning)
-                return;
-            
-            connectThread = new Thread(RunConnectProcess) { IsBackground = true };
-            connectThread.Start();
+            lock (processLock)
+            {
+                if (isRunning)
+                    return;
+                
+                // Ensure any previous process is fully cleaned up before starting a new one
+                if (connectProcess != null)
+                {
+                    AnchorpointLogger.LogWarning("Previous process still exists during StartConnect, cleaning up...");
+                    StopConnect();
+                }
+                
+                connectThread = new Thread(RunConnectProcess) { IsBackground = true };
+                connectThread.Start();
 
-            EditorApplication.update += OnEditorUpdate; // Subscribe to tick updates
+                EditorApplication.update += OnEditorUpdate; // Subscribe to tick updates
+            }
         }
 
         // Gracefully stops the background thread and cleans up the process.
         public void StopConnect()
         {
-            isRunning = false;
-
-            if (connectProcess != null)
+            lock (processLock)
             {
-                try
+                isRunning = false;
+
+                if (connectProcess != null)
                 {
-                    // If the process is still running, kill and dispose it
-                    if (!connectProcess.HasExited)
+                    int processId = -1;
+                    try
                     {
-                        connectProcess.Kill();
+                        processId = connectProcess.Id;
+                        
+                        // If the process is still running, kill and dispose it
+                        if (!connectProcess.HasExited)
+                        {
+                            AnchorpointLogger.Log($"Terminating ap process with ID: {processId}");
+                            connectProcess.Kill();
+                            // Give the process time to actually terminate
+                            if (!connectProcess.WaitForExit(2000))
+                            {
+                                AnchorpointLogger.LogWarning("Process did not terminate within 2 seconds");
+                            }
+                        }
+                        
+                        // Unregister from tracker since we're cleaning up properly
+                        ProcessTracker.UnregisterProcess(processId);
+                    }
+                    catch (InvalidOperationException ex)
+                    {
+                        // Process might have already exited or is invalid
+                        AnchorpointLogger.Log($"Process cleanup exception (expected): {ex.Message}");
+                        // Still try to unregister if we got the process ID
+                        if (processId > 0)
+                        {
+                            ProcessTracker.UnregisterProcess(processId);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        AnchorpointLogger.LogError($"Unexpected error during process cleanup: {ex.Message}");
+                        // Still try to unregister if we got the process ID
+                        if (processId > 0)
+                        {
+                            ProcessTracker.UnregisterProcess(processId);
+                        }
+                    }
+                    finally
+                    {
+                        // Dispose the process in all cases
+                        try
+                        {
+                            connectProcess.Dispose();
+                        }
+                        catch (Exception ex)
+                        {
+                            AnchorpointLogger.LogError($"Error disposing process: {ex.Message}");
+                        }
+                        connectProcess = null;
                     }
                 }
-                catch (InvalidOperationException)
-                {
-                    // Process might have already exited or is invalid,
-                    // just ignore and proceed
-                }
-                finally
-                {
-                    // Dispose the process in all cases
-                    connectProcess.Dispose();
-                    connectProcess = null;
-                }
-            }
 
-            if (connectThread != null && connectThread.IsAlive)
-            {
-                connectThread.Join();
-                connectThread = null;
-            }
+                if (connectThread != null && connectThread.IsAlive)
+                {
+                    try
+                    {
+                        // Give the thread a reasonable time to finish
+                        if (!connectThread.Join(3000))
+                        {
+                            AnchorpointLogger.LogWarning("Background thread did not terminate within 3 seconds");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        AnchorpointLogger.LogError($"Error joining background thread: {ex.Message}");
+                    }
+                    finally
+                    {
+                        connectThread = null;
+                    }
+                }
 
-            EditorApplication.update -= OnEditorUpdate;
+                EditorApplication.update -= OnEditorUpdate;
+            }
         }
 
         // Runs the Anchorpoint CLI connect process and listens to output streams.
@@ -99,6 +160,10 @@ namespace Anchorpoint.Wrapper
                 connectProcess.ErrorDataReceived += (sender, e) => OnConnectDataReceived(e.Data);
 
                 connectProcess.Start();
+                
+                // Register the process with our tracker
+                ProcessTracker.RegisterProcess(connectProcess.Id, "Unity connect process");
+                
                 connectProcess.BeginOutputReadLine();
                 connectProcess.BeginErrorReadLine();
 

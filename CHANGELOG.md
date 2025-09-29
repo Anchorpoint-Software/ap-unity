@@ -1,3 +1,7 @@
+# 1.0.5
+
+- Fix the issue with dangling ap processes after domain reload
+
 # 1.0.4
 
 - Add a warning about the Play Mode
