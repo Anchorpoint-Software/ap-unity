@@ -292,9 +292,8 @@ namespace Anchorpoint.Editor
                     }
 
                     var isAnyFileSelected = IsAnyFileSelected();
-                    commitButton.SetEnabled(isAnyFileSelected &&
-                                            !string.IsNullOrWhiteSpace(commitMessageField
-                                                .value)); // Update the commit button state
+                    var isCommitMessageFieldFilled = IsCommitMessageFieldFilled();
+                    commitButton.SetEnabled(isAnyFileSelected && isCommitMessageFieldFilled); // Update the commit button state
                     revertButton.SetEnabled(isAnyFileSelected); // Update the revert button state
                     commitMessageField.SetEnabled(isAnyFileSelected);
                     // Refresh all visible items in the tree view
@@ -740,9 +739,11 @@ namespace Anchorpoint.Editor
             if (treeViewItems != null && treeViewItems.Count > 0)
             {
                 SetAllCheckboxesRecursive(treeViewItems.Select(x => x.data), isChecked);
-                commitButton.SetEnabled(IsAnyFileSelected());
-                revertButton.SetEnabled(IsAnyFileSelected());
-                commitMessageField.SetEnabled(IsAnyFileSelected());
+                var isAnyFileSelected = IsAnyFileSelected();
+                var isCommitMessageFieldFilled = IsCommitMessageFieldFilled();
+                commitButton.SetEnabled(isAnyFileSelected && isCommitMessageFieldFilled);
+                revertButton.SetEnabled(isAnyFileSelected);
+                commitMessageField.SetEnabled(isAnyFileSelected);
             }
 
             treeView = rootVisualElement.Q<TreeView>("TreeView");
@@ -785,6 +786,11 @@ namespace Anchorpoint.Editor
             {
                 return GetSelectedFiles().Count > 0;
             }
+        }
+
+        private bool IsCommitMessageFieldFilled()
+        {
+            return commitMessageField != null && !string.IsNullOrWhiteSpace(commitMessageField.value);
         }
 
         private bool AddSelectedFilesRecursive(ProjectData node, List<string> selectedFiles)
