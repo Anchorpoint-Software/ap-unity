@@ -20,10 +20,10 @@ namespace Anchorpoint.Parser
         private static Dictionary<string, string> _lockFiles = new();
         private static CLIUser currentUser;
         private static HashSet<string> outdatedFiles = new HashSet<string>();
-        
+
         private static Dictionary<string, string> emailToPictureUrl = new Dictionary<string, string>();
         private static Dictionary<string, Texture2D> emailToPictureTexture = new Dictionary<string, Texture2D>();
-        
+
         private static List<CLIUser> userList;
 
         // Returns the latest CLI status information
@@ -68,7 +68,7 @@ namespace Anchorpoint.Parser
                     {
                         _lockFiles.Clear();
                     }
-                    
+
                     // Copy outdated files if available, otherwise clear the list
                     if (_status.OutdatedFiles != null)
                     {
@@ -79,7 +79,7 @@ namespace Anchorpoint.Parser
                     {
                         outdatedFiles.Clear();
                     }
-                    
+
                     break;
 
                 default:
@@ -105,7 +105,7 @@ namespace Anchorpoint.Parser
         {
             return currentUser;
         }
-        
+
         // Stores the user list and maps email addresses to profile picture URLs
         public static void UpdateUserList(List<CLIUser> users)
         {
@@ -118,7 +118,7 @@ namespace Anchorpoint.Parser
                 }
             }
         }
-        
+
         // Retrieves or downloads the user profile picture from cache or URL
         public static void GetUserPicture(string email, Action<Texture2D> callback)
         {
@@ -140,7 +140,7 @@ namespace Anchorpoint.Parser
                 callback(null);
             }
         }
-        
+
         // Coroutine that downloads a user profile picture from the provided URL
         private static IEnumerator DownloadUserPictureCoroutine(string email, string url, Action<Texture2D> callback)
         {
@@ -167,11 +167,49 @@ namespace Anchorpoint.Parser
         {
             return userList;
         }
-        
+
         // Returns the list of outdated files detected in the last CLI status check
         public static HashSet<string> GetOutdatedFiles()
         {
             return outdatedFiles;
+        }
+
+        // Adds locked files to the lock list with the current user's email
+        public static void AddLockedFiles(List<string> files)
+        {
+            if (files == null || files.Count == 0)
+                return;
+
+            string userEmail = currentUser?.Email ?? "";
+
+            foreach (string file in files)
+            {
+                if (!string.IsNullOrEmpty(file))
+                {
+                    _lockFiles[file] = userEmail;
+                }
+            }
+
+            AnchorpointLogger.Log($"Added {files.Count} locked files");
+            AnchorpointEvents.RaiseStatusUpdated();
+        }
+
+        // Removes unlocked files from the lock list
+        public static void RemoveLockedFiles(List<string> files)
+        {
+            if (files == null || files.Count == 0)
+                return;
+
+            foreach (string file in files)
+            {
+                if (!string.IsNullOrEmpty(file) && _lockFiles.ContainsKey(file))
+                {
+                    _lockFiles.Remove(file);
+                }
+            }
+
+            AnchorpointLogger.Log($"Removed {files.Count} unlocked files");
+            AnchorpointEvents.RaiseStatusUpdated();
         }
     }
 }

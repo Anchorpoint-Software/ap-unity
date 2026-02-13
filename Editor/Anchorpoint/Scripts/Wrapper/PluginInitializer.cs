@@ -70,7 +70,7 @@ namespace Anchorpoint.Wrapper
                 {
                     // Ensure any tracked processes are cleaned up before creating new handler
                     ProcessTracker.KillTrackedProcesses();
-                    
+
                     connectHandler = new ConnectCommandHandler();
                     AnchorpointEvents.OnMessageReceived += OnConnectMessageReceived;
 
@@ -145,12 +145,12 @@ namespace Anchorpoint.Wrapper
         private static void OnBeforeAssemblyReload()
         {
             AnchorpointLogger.Log("Domain reload starting - cleaning up connections");
-            
+
             StopConnection();
-            
+
             // Kill any tracked ap processes before stopping our connection
             ProcessTracker.KillTrackedProcesses();
-            
+
             // Give extra time for cleanup during domain reload
             System.Threading.Thread.Sleep(500);
         }
@@ -158,7 +158,7 @@ namespace Anchorpoint.Wrapper
         private static void AfterAssemblyReload()
         {
             AnchorpointLogger.Log("Domain reload completed - checking reconnection");
-            
+
             // Small delay to ensure any remaining processes have time to clean up
             EditorApplication.delayCall += () =>
             {
@@ -190,13 +190,20 @@ namespace Anchorpoint.Wrapper
         {
             // Processes messages received from Anchorpoint CLI and updates project state accordingly.
             FetchCurrentUser();
-            AnchorpointLogger.LogWarning($"Message type {message.type}");
+
+            // Log the full connect message details
+            string filesOutput = message.files != null && message.files.Count > 0
+                ? string.Join(", ", message.files)
+                : "none";
+            AnchorpointLogger.LogWarning($"Connect Message - Type: '{message.type}', ID: '{message.id}', Files: [{filesOutput}]");
 
             switch (message.type)
             {
                 case "files locked":
+                    DataManager.AddLockedFiles(message.files);
                     break;
                 case "files unlocked":
+                    DataManager.RemoveLockedFiles(message.files);
                     break;
                 case "files outdated":
                     CLIWrapper.Status();

@@ -109,7 +109,7 @@ namespace Anchorpoint.Editor
             else if (outdatedFiles != null && outdatedFiles.Contains(commitPath))
             {
                 // File is both outdated and modified
-                CacheIcon(commitPath, status == "M" ? LoadIcon(modifiedOutdatedIcon): LoadIcon(outdatedIcon));
+                CacheIcon(commitPath, status == "M" ? LoadIcon(modifiedOutdatedIcon) : LoadIcon(outdatedIcon));
             }
             // File is locked: show lock or avatar icon
             else if (lockedFiles != null && lockedFiles.TryGetValue(commitPath, out var lockingUserEmail))
@@ -146,7 +146,7 @@ namespace Anchorpoint.Editor
                         });
                     }
                 }
-            } 
+            }
             // Modified file: show modified icon
             else if (status == "M")
             {
@@ -186,7 +186,7 @@ namespace Anchorpoint.Editor
             }
             return original;
         }
-        
+
         private static void OnStatusUpdated()
         {
             EditorApplication.delayCall += () =>
@@ -200,20 +200,31 @@ namespace Anchorpoint.Editor
         private static void RefreshStatusData()
         {
             CLIStatus status = DataManager.GetStatus();
-            
+
             if (status != null)
             {
                 stagedFiles = status.Staged;
                 notStagedFiles = status.NotStaged;
-                lockedFiles = status.LockedFiles;
-                outdatedFiles = DataManager.GetOutdatedFiles();
+            }
 
+            // Always get the latest lock files directly from DataManager
+            // This ensures we get updates from both Status commands and lock/unlock messages
+            lockedFiles = DataManager.GetLockList();
+            outdatedFiles = DataManager.GetOutdatedFiles();
+
+            if (status != null)
+            {
                 // Combine all known updated file keys
-                var updatedFiles = new HashSet<string>(stagedFiles.Keys);
-                updatedFiles.UnionWith(notStagedFiles.Keys);
-                updatedFiles.UnionWith((IEnumerable<string>)lockedFiles.Keys ?? new HashSet<string>());
-                updatedFiles.UnionWith(outdatedFiles ?? new HashSet<string>());
-                
+                var updatedFiles = new HashSet<string>();
+                if (stagedFiles != null)
+                    updatedFiles.UnionWith(stagedFiles.Keys);
+                if (notStagedFiles != null)
+                    updatedFiles.UnionWith(notStagedFiles.Keys);
+                if (lockedFiles != null)
+                    updatedFiles.UnionWith(lockedFiles.Keys);
+                if (outdatedFiles != null)
+                    updatedFiles.UnionWith(outdatedFiles);
+
                 // Find icons that should be removed from cache
                 var keysToRemove = new List<string>();
 
@@ -237,10 +248,10 @@ namespace Anchorpoint.Editor
             }
             else
             {
+                // Only clear staged/not staged files when status is null
+                // Locked files and outdated files are managed independently
                 stagedFiles = null;
                 notStagedFiles = null;
-                lockedFiles = null;
-                outdatedFiles = null;
                 IconCache.PersistentReferences.Clear();
                 IconCache.Icons.Clear();
             }
@@ -273,9 +284,9 @@ namespace Anchorpoint.Editor
             {
                 return;
             }
-            foreach (var tex in IconCache.PersistentReferences) {  }
+            foreach (var tex in IconCache.PersistentReferences) { }
         }
-        
+
         // Trigger optimistic update of an asset icon to modified state
         public static void MarkAssetAsModified(string commitPath)
         {
