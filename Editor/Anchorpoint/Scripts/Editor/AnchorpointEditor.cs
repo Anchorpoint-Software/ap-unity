@@ -89,7 +89,7 @@ namespace Anchorpoint.Editor
         private string projectPath; // Absolute path to the Unity project root
         private const string assetsFolderName = "Assets";
         private const string anchorPointIcon = "d8e0264a1e3a54b09aaf9e7ac62d4e1f";
-        private const string helpUrl = "https://docs.anchorpoint.app/docs/version-control/first-steps/unity/";
+        private const string helpUrl = "https://docs.anchorpoint.app/git/unity/";
 
         private const string noProjectErrorDescription =
             "This Unity project is not maintained by Anchorpoint. You will need to create a project first.\n\nCheck the documentation for help.";
