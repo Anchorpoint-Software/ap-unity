@@ -3,7 +3,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Threading.Tasks;
 using Anchorpoint.Constants;
 using Anchorpoint.Events;
 using Anchorpoint.Logger;
@@ -312,12 +311,18 @@ namespace Anchorpoint.Editor
                 container.Add(icon);
                 container.Add(label);
 
+                // Register context click handler
+                container.RegisterCallback<ContextClickEvent>(OnTreeItemContextClick);
+
                 return container;
             };
 
             treeView.bindItem = (element, index) =>
             {
                 var itemData = treeView.GetItemDataForIndex<ProjectData>(index);
+
+                // Store itemData in container's userData for context menu access
+                element.userData = itemData;
 
                 var checkbox = element.Q<Toggle>("checkbox");
                 checkbox.userData = itemData;
@@ -1667,6 +1672,50 @@ namespace Anchorpoint.Editor
         {
             spinnerImg.style.display = DisplayStyle.None;
             EditorApplication.update -= UpdateGifAnimation;
+        }
+
+        private void OnTreeItemContextClick(ContextClickEvent evt)
+        {
+            var element = evt.currentTarget as VisualElement;
+            if (element?.userData is not ProjectData itemData)
+                return;
+
+            // Skip context menu for deleted files
+            if (itemData.Status == "D")
+                return;
+
+            evt.StopPropagation();
+
+            var menu = new GenericMenu();
+
+            // "Show in Anchorpoint" - available for all nodes
+            menu.AddItem(new GUIContent("Show in Anchorpoint"), false, () =>
+            {
+                var fullPath = Path.GetFullPath(itemData.Path);
+                AnchorpointFileOpener.OpenInAnchorpoint(fullPath);
+            });
+
+            // "Show in Unity" - only for files
+            if (!itemData.IsDirectory)
+            {
+                menu.AddItem(new GUIContent("Show in Unity"), false, () =>
+                {
+                    try
+                    {
+                        var asset = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(itemData.Path);
+                        if (asset != null)
+                        {
+                            EditorGUIUtility.PingObject(asset);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        AnchorpointLogger.LogError($"Failed to show in Unity: {ex.Message}");
+                    }
+                });
+            }
+
+            menu.ShowAsContext();
         }
     }
 }

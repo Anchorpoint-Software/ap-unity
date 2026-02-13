@@ -1,8 +1,5 @@
-using Anchorpoint.Constants;
 using Anchorpoint.Logger;
 using UnityEditor;
-using UnityEngine;
-using System.Diagnostics;
 
 namespace Anchorpoint.Editor
 {
@@ -18,35 +15,18 @@ namespace Anchorpoint.Editor
         [MenuItem("Assets/Show in Anchorpoint", false, 1000)]
         private static void ShowInAnchorpoint()
         {
-            string[] selectedGuids = Selection.assetGUIDs;
+            var selectedGuids = Selection.assetGUIDs;
             if (selectedGuids.Length == 0)
             {
                 AnchorpointLogger.LogWarning("No assets selected.");
                 return;
             }
 
-            foreach (string guid in selectedGuids)
+            foreach (var guid in selectedGuids)
             {
-                string assetPath = AssetDatabase.GUIDToAssetPath(guid);
-                string fullPath = System.IO.Path.GetFullPath(assetPath);
-
-                try
-                {
-                    if (Application.platform == RuntimePlatform.OSXEditor)
-                    {
-                        Process.Start("open", $"-a \"{ReturnPath()}\" \"{fullPath}\"");
-                    }
-                    else
-                    {
-                        Process.Start(ReturnPath(), $"\"{fullPath}\"");
-                    }
-
-                    AnchorpointLogger.Log($"Opening file in Anchorpoint: {fullPath}");
-                }
-                catch (System.Exception ex)
-                {
-                    AnchorpointLogger.LogError($"Failed to open file in Anchorpoint: {ex.Message}");
-                }
+                var assetPath = AssetDatabase.GUIDToAssetPath(guid);
+                var fullPath = System.IO.Path.GetFullPath(assetPath);
+                AnchorpointFileOpener.OpenInAnchorpoint(fullPath);
             }
         }
 
@@ -55,12 +35,6 @@ namespace Anchorpoint.Editor
         private static bool ShowAnchorpointValidation()
         {
             return Selection.assetGUIDs.Length == 1;
-        }
-
-        // Returns the system path to the Anchorpoint executable as defined in CLIConstants.
-        private static string ReturnPath()
-        {
-            return CLIConstants.AnchorpointExecutablePath;
         }
     }
 }
