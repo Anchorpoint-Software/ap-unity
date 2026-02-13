@@ -136,7 +136,7 @@ namespace Anchorpoint.Wrapper
             EnqueueCommand(Command.Revert, CLIConstants.RevertFiles(files), true, callback);
         }
 
-        // public static void LockList() => EnqueueCommand(Command.LockList, CLIConstants.LockList);
+        public static void LockList() => EnqueueCommand(Command.LockList, CLIConstants.LockList);
 
         public static void LockCreate(bool keep, params string[] files)
         {
@@ -260,7 +260,7 @@ namespace Anchorpoint.Wrapper
                 AnchorpointLogger.Log($"{command} Command Completed");
                 AnchorpointEvents.RaiseCommandOutputReceived($"{command} Command Completed");
                 AddOutput($"\n\n{command} Command Completed");
-                
+
                 if (sequential)
                 {
                     callback?.Invoke();
@@ -347,6 +347,7 @@ namespace Anchorpoint.Wrapper
 
                 case Command.LockList:
                     List<Dictionary<string, string>> fileDataList = CLIJsonParser.ParseJson<List<Dictionary<string, string>>>(jsonOutput);
+                    // Note: Empty list is valid (no locks), null means parsing failed
                     if (fileDataList != null)
                     {
                         DataManager.UpdateData(fileDataList);
@@ -354,7 +355,7 @@ namespace Anchorpoint.Wrapper
                     }
                     else
                     {
-                        AnchorpointLogger.LogError("Failed to parse output as CLILockFile or output was empty.");
+                        AnchorpointLogger.LogError("Failed to parse lock list output.");
                     }
                     break;
 

@@ -1038,7 +1038,7 @@ namespace Anchorpoint.Editor
             EditorApplication.delayCall += () =>
             {
                 //prevent certain CLI outputs from being shown in the processing label
-                string[] ignoredOutputs = new string[] { "UserList", "Output:" };
+                string[] ignoredOutputs = new string[] { "UserList", "Output:", "LockList" };
                 if (ignoredOutputs.Any(ignored => output.Contains(ignored, StringComparison.OrdinalIgnoreCase)) ||
                     hasError)
                 {

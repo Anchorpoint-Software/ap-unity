@@ -3,6 +3,7 @@
 # 1.0.7
 
 - UI now refreshes when locked files are changed in the project
+- Commit message field is now only disabled when no files are listed
 
 # 1.0.6
 

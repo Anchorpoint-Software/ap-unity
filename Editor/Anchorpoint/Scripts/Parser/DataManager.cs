@@ -82,8 +82,23 @@ namespace Anchorpoint.Parser
 
                     break;
 
+                case List<Dictionary<string, string>> lockList:
+                    // Update lock files from lock list command
+                    // CLI returns format: [{"filepath": "user@email.com"}, ...]
+                    _lockFiles.Clear();
+                    foreach (var lockEntry in lockList)
+                    {
+                        foreach (var kvp in lockEntry)
+                        {
+                            _lockFiles[kvp.Key] = kvp.Value;
+                        }
+                    }
+                    AnchorpointLogger.Log($"Updated lock list with {_lockFiles.Count} locked files");
+                    AnchorpointEvents.RaiseStatusUpdated();
+                    break;
+
                 default:
-                    AnchorpointLogger.LogError("Unsupported data type in UpdateData.");
+                    AnchorpointLogger.LogError($"Unsupported data type in UpdateData: {data.GetType().Name}");
                     break;
             }
         }

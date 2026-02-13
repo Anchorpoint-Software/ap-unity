@@ -196,7 +196,7 @@ namespace Anchorpoint.Wrapper
             switch (message.type)
             {
                 case "files locked":
-                    CLIWrapper.Status();
+                    CLIWrapper.LockList();
                     break;
                 case "files unlocked":
                     DataManager.RemoveLockedFiles(message.files);
