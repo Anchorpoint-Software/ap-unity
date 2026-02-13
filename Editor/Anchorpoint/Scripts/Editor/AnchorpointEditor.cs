@@ -294,7 +294,7 @@ namespace Anchorpoint.Editor
                     var isCommitMessageFieldFilled = IsCommitMessageFieldFilled();
                     commitButton.SetEnabled(isAnyFileSelected && isCommitMessageFieldFilled); // Update the commit button state
                     revertButton.SetEnabled(isAnyFileSelected); // Update the revert button state
-                    commitMessageField.SetEnabled(isAnyFileSelected);
+                    commitMessageField.SetEnabled(HasFilesListed());
                     // Refresh all visible items in the tree view
                     treeView.RefreshItems();
                 });
@@ -748,7 +748,7 @@ namespace Anchorpoint.Editor
                 var isCommitMessageFieldFilled = IsCommitMessageFieldFilled();
                 commitButton.SetEnabled(isAnyFileSelected && isCommitMessageFieldFilled);
                 revertButton.SetEnabled(isAnyFileSelected);
-                commitMessageField.SetEnabled(isAnyFileSelected);
+                commitMessageField.SetEnabled(HasFilesListed());
             }
 
             treeView = rootVisualElement.Q<TreeView>("TreeView");
@@ -796,6 +796,11 @@ namespace Anchorpoint.Editor
         private bool IsCommitMessageFieldFilled()
         {
             return commitMessageField != null && !string.IsNullOrWhiteSpace(commitMessageField.value);
+        }
+
+        private bool HasFilesListed()
+        {
+            return treeViewItems != null && treeViewItems.Count > 0;
         }
 
         private bool AddSelectedFilesRecursive(ProjectData node, List<string> selectedFiles)
