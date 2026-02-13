@@ -1,3 +1,7 @@
+# 1.0.6
+
+- Fix the issue with the commit button being enabled even when no files are selected
+
 # 1.0.5
 
 - Fix the issue with dangling ap processes after domain reload
