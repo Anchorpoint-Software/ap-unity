@@ -191,16 +191,12 @@ namespace Anchorpoint.Wrapper
             // Processes messages received from Anchorpoint CLI and updates project state accordingly.
             FetchCurrentUser();
 
-            // Log the full connect message details
-            string filesOutput = message.files != null && message.files.Count > 0
-                ? string.Join(", ", message.files)
-                : "none";
-            AnchorpointLogger.LogWarning($"Connect Message - Type: '{message.type}', ID: '{message.id}', Files: [{filesOutput}]");
+            AnchorpointLogger.LogWarning($"Connect Message - Type: '{message.type}'");
 
             switch (message.type)
             {
                 case "files locked":
-                    DataManager.AddLockedFiles(message.files);
+                    CLIWrapper.Status();
                     break;
                 case "files unlocked":
                     DataManager.RemoveLockedFiles(message.files);
