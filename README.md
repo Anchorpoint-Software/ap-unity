@@ -26,8 +26,7 @@ To enable or disable detailed logs from the plugin, use the global logger flag. 
 
 <pre lang="markdown">
 // Enable or disable logging
-AnchorpointLogger.IsEnabled = true; // Enable logging
-AnchorpointLogger.IsEnabled = false; // Disable logging
+In AnchorpointLogger.cs, set the bool "EnableLogging" to true.
 </pre>
 
 All critical steps like CLI communication, status refresh, command execution, and UI state changes are logged when enabled.

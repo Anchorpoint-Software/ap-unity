@@ -80,5 +80,8 @@ com.unity.asset-store-tools/
 # Anchorpoint approj metafiles
 *.approj.meta
 
+# GitHub Copilot instructions
+.github/
+
 Logs.meta
 UserSettings.meta
