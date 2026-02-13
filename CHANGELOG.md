@@ -1,3 +1,9 @@
+
+
+# 1.0.7
+
+- UI now refreshes when locked files are changed in the project
+
 # 1.0.6
 
 - Fix the issue with the commit button being enabled even when no files are selected
