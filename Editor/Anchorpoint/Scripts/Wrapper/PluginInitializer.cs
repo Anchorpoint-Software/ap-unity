@@ -210,6 +210,7 @@ namespace Anchorpoint.Wrapper
                 case "project opened":
                     IsProjectOpen = true;
                     SetNoProjectState(false);
+                    CLIWrapper.Status();
                     break;
                 case "project closed":
                     IsProjectOpen = false;

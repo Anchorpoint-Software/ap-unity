@@ -205,7 +205,7 @@ namespace Anchorpoint.Editor
 
         private void showCachedProcessingLabel()
         {
-            if (commandIncomplete)
+            if (commandIncomplete && processingTextLabel != null)
             {
                 processingTextLabel.text =
                     string.IsNullOrEmpty(cacheProcessingLabel) ? "Processing..." : cacheProcessingLabel;
@@ -1037,6 +1037,9 @@ namespace Anchorpoint.Editor
 
             EditorApplication.delayCall += () =>
             {
+                // Skip if UI elements are not initialized yet (window not in Connected view)
+                if (processingTextLabel == null) return;
+
                 //prevent certain CLI outputs from being shown in the processing label
                 string[] ignoredOutputs = new string[] { "UserList", "Output:", "LockList" };
                 if (ignoredOutputs.Any(ignored => output.Contains(ignored, StringComparison.OrdinalIgnoreCase)) ||
@@ -1139,8 +1142,8 @@ namespace Anchorpoint.Editor
             inProcess = false;
             AnchorpointEvents.inProgress = false;
             ChangingUIInProgress(true);
-            commitButton.SetEnabled(false);
-            revertButton.SetEnabled(false);
+            commitButton?.SetEnabled(false);
+            revertButton?.SetEnabled(false);
         }
 
         private void Update()
@@ -1547,6 +1550,7 @@ namespace Anchorpoint.Editor
 
         private void ChangingUIInProgress(bool flag)
         {
+            if (allButton == null) return;
             allButton.SetEnabled(flag);
             noneButton.SetEnabled(flag);
             disconnectButton.SetEnabled(flag);
@@ -1564,12 +1568,14 @@ namespace Anchorpoint.Editor
 
         private void ChangingIndRefreshButton(bool flag)
         {
+            if (refreshButton == null) return;
             refreshButton.SetEnabled(flag);
         }
 
         IEnumerator DelayedExecution(float delayInSeconds)
         {
             yield return new EditorWaitForSeconds(delayInSeconds);
+            if (processingTextLabel == null) yield break;
             processingTextLabel.style.color = Color.white;
             processingTextLabel.text = "";
             hasError = false;
@@ -1675,6 +1681,7 @@ namespace Anchorpoint.Editor
 
         private void StopSpinnerAnimation()
         {
+            if (spinnerImg == null) return;
             spinnerImg.style.display = DisplayStyle.None;
             EditorApplication.update -= UpdateGifAnimation;
         }

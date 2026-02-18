@@ -144,7 +144,10 @@ namespace Anchorpoint.Parser
                 return;
             }
 
-            if (emailToPictureUrl.TryGetValue(email, out var url))
+            if (emailToPictureUrl.TryGetValue(email, out var url)
+                && !string.IsNullOrEmpty(url)
+                && Uri.TryCreate(url, UriKind.Absolute, out var uri)
+                && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps))
             {
                 // Start downloading the picture
                 EditorCoroutineUtility.StartCoroutineOwnerless(DownloadUserPictureCoroutine(email, url, callback));
