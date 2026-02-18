@@ -1,5 +1,10 @@
 
 
+# 1.0.8
+
+- Fix NullReferenceException on startup and when file lock icons appear
+- Fix CURL errors on profile icon fetch
+
 # 1.0.7
 
 - UI now refreshes when locked files are changed in the project
