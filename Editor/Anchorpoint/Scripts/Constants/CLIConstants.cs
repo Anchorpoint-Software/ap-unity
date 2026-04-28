@@ -16,7 +16,10 @@ namespace Anchorpoint.Constants
     public static class CLIConstants
     {
         private const string APIVersion = "--apiVersion 1";
-        private const string cliPath = "/Applications/Anchorpoint.app/Contents/Frameworks/ap";
+        private const string EnvironmentVariableName = "ANCHORPOINT_ROOT";
+        private const string CommandLineArgName = "-anchorpointRoot";
+        private const string MacDefaultInstallFolder = "/Applications/Anchorpoint.app/Contents/Frameworks";
+        private const string MacDefaultAppBundle = "/Applications/Anchorpoint.app";
         public static string CLIPath {get; private set;} = null;
         private static string CLIVersion {get; set;} = null;
 
@@ -136,51 +139,117 @@ namespace Anchorpoint.Constants
             CLIPath    = null;
             CLIVersion = null;
 
-            if (Environment.OSVersion.Platform == PlatformID.Win32NT)
+            string overrideSource;
+            string installFolder = GetInstallFolder(out overrideSource);
+
+            if (string.IsNullOrEmpty(installFolder))
             {
-                string basePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Anchorpoint");
-                string pattern = @"app-(\d+\.\d+\.\d+)";
-                string cliExecutableName = "ap.exe";
-
-                // Get the most recent version of the CLI by sorting versioned subdirectories
-                var versionedDirectories = Directory.GetDirectories(basePath)
-                                                    .Where(d => Regex.IsMatch(Path.GetFileName(d), pattern)) // Filter directories by the pattern
-                                                    .OrderByDescending(d => Version.Parse(Regex.Match(d, pattern).Groups[1].Value)) // Sort by parsed version
-                                                    .ToList();
-
-                if (versionedDirectories.Any())
-                {
-                    string latestVersionPath = versionedDirectories.First();
-                    string latestVersion = Regex.Match(latestVersionPath, pattern).Groups[1].Value;
-                    string cliPath = Path.Combine(latestVersionPath, cliExecutableName);
-
-                    if (File.Exists(cliPath))
-                    {
-                        CLIPath = cliPath;
-                        CLIVersion = latestVersion;
-                    }
-                    else
-                    {
-                        CLIVersion = "CLI Not Installed!";
-                    }
-                }
+                CLIVersion = IsSupportedPlatform() ? "CLI Not Installed!" : "Unsupported OS";
+                return;
             }
-            else if (Environment.OSVersion.Platform == PlatformID.Unix || Environment.OSVersion.Platform == PlatformID.MacOSX)
+
+            string cliExecutableName = (Environment.OSVersion.Platform == PlatformID.Win32NT) ? "ap.exe" : "ap";
+            string cliFullPath = Path.Combine(installFolder, cliExecutableName);
+
+            if (!File.Exists(cliFullPath))
             {
-                if (File.Exists(cliPath))
-                {
-                    CLIPath = cliPath;
-                    CLIVersion = "macOS CLI Installed";
-                }
-                else
-                {
-                    CLIVersion = "CLI Not Installed!";
-                }
+                AnchorpointLogger.LogWarning($"Anchorpoint CLI not found at expected path: {cliFullPath}");
+                CLIVersion = "CLI Not Installed!";
+                return;
+            }
+
+            CLIPath = cliFullPath;
+
+            if (overrideSource != null)
+            {
+                CLIVersion = $"Custom ({overrideSource})";
+                AnchorpointLogger.Log($"Using {overrideSource} CLI at: {cliFullPath}");
             }
             else
             {
-                CLIVersion = "Unsupported OS";
+                CLIVersion = ParseInstalledVersion(installFolder) ?? "Installed";
             }
+        }
+
+        // Resolves the install folder containing the Anchorpoint binaries.
+        // Resolution order: -anchorpointRoot CLI arg > ANCHORPOINT_ROOT env var > platform default.
+        // Returns null if no usable folder is found. The override source (if any) is reported via overrideSource.
+        private static string GetInstallFolder(out string overrideSource)
+        {
+            overrideSource = null;
+
+            string cliRoot = GetCommandLineArgValue(CommandLineArgName);
+            if (!string.IsNullOrEmpty(cliRoot))
+            {
+                if (Directory.Exists(cliRoot))
+                {
+                    overrideSource = CommandLineArgName;
+                    return cliRoot;
+                }
+
+                AnchorpointLogger.LogWarning($"{CommandLineArgName} is set to '{cliRoot}' but the directory does not exist; falling back to environment variable / default detection.");
+            }
+
+            string envRoot = Environment.GetEnvironmentVariable(EnvironmentVariableName);
+            if (!string.IsNullOrEmpty(envRoot))
+            {
+                if (Directory.Exists(envRoot))
+                {
+                    overrideSource = EnvironmentVariableName;
+                    return envRoot;
+                }
+
+                AnchorpointLogger.LogWarning($"{EnvironmentVariableName} is set to '{envRoot}' but the directory does not exist; falling back to default detection.");
+            }
+
+            if (Environment.OSVersion.Platform == PlatformID.Win32NT)
+            {
+                string basePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Anchorpoint");
+                if (!Directory.Exists(basePath))
+                    return null;
+
+                string pattern = @"app-(\d+\.\d+\.\d+)";
+                var versionedDirectories = Directory.GetDirectories(basePath)
+                                                    .Where(d => Regex.IsMatch(Path.GetFileName(d), pattern))
+                                                    .OrderByDescending(d => Version.Parse(Regex.Match(d, pattern).Groups[1].Value))
+                                                    .ToList();
+                return versionedDirectories.FirstOrDefault();
+            }
+
+            if (Environment.OSVersion.Platform == PlatformID.Unix || Environment.OSVersion.Platform == PlatformID.MacOSX)
+            {
+                return MacDefaultInstallFolder;
+            }
+
+            return null;
+        }
+
+        // Reads a "-name <value>" pair from the editor's command-line arguments.
+        // Unity Hub forwards per-project command-line arguments to the editor; this lets QA
+        // pin a CLI/install via Hub settings without touching environment variables.
+        private static string GetCommandLineArgValue(string argName)
+        {
+            string[] args = Environment.GetCommandLineArgs();
+            for (int i = 0; i < args.Length - 1; i++)
+            {
+                if (string.Equals(args[i], argName, StringComparison.OrdinalIgnoreCase))
+                    return args[i + 1];
+            }
+            return null;
+        }
+
+        // Parses a version string like "1.18.4" out of an "app-X.Y.Z" install folder name. Returns null if no match.
+        private static string ParseInstalledVersion(string installFolder)
+        {
+            var match = Regex.Match(installFolder ?? string.Empty, @"app-(\d+\.\d+\.\d+)");
+            return match.Success ? match.Groups[1].Value : null;
+        }
+
+        private static bool IsSupportedPlatform()
+        {
+            return Environment.OSVersion.Platform == PlatformID.Win32NT
+                || Environment.OSVersion.Platform == PlatformID.Unix
+                || Environment.OSVersion.Platform == PlatformID.MacOSX;
         }
         
         private static string FindGitIgnore(string startPath)
@@ -212,37 +281,20 @@ namespace Anchorpoint.Constants
         // Identify available versions of Anchorpoint from subdirectories and return the latest executable path
         private static string GetAnchorpointExecutablePath()
         {
+            string overrideSource;
+            string installFolder = GetInstallFolder(out overrideSource);
+
             switch (Application.platform)
             {
                 case RuntimePlatform.WindowsEditor:
                 {
-                    string basePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Anchorpoint");
-
-                    // Ensure the directory exists before proceeding
-                    if (!Directory.Exists(basePath))
+                    if (string.IsNullOrEmpty(installFolder))
                     {
-                        AnchorpointLogger.LogWarning($"Anchorpoint directory not found: {basePath}");
+                        AnchorpointLogger.LogWarning("Anchorpoint install folder could not be located.");
                         return null;
                     }
 
-                    string pattern = @"app-(\d+\.\d+\.\d+)";
-                    string executableName = "Anchorpoint.exe";
-
-                    // Identify available versions of Anchorpoint from subdirectories and return the latest executable path
-                    var versionedDirectories = Directory.GetDirectories(basePath)
-                        .Where(d => Regex.IsMatch(Path.GetFileName(d), pattern))
-                        .OrderByDescending(d => Version.Parse(Regex.Match(d, pattern).Groups[1].Value))
-                        .ToList();
-
-                    if (!versionedDirectories.Any())
-                    {
-                        AnchorpointLogger.LogWarning("No Anchorpoint versions found in: " + basePath);
-                        return null;
-                    }
-
-                    string latestVersionPath = versionedDirectories.First();
-                    string latestVersion = Regex.Match(latestVersionPath, pattern).Groups[1].Value;
-                    string exePath = Path.Combine(latestVersionPath, executableName);
+                    string exePath = Path.Combine(installFolder, "Anchorpoint.exe");
 
                     if (!File.Exists(exePath))
                     {
@@ -253,7 +305,20 @@ namespace Anchorpoint.Constants
                     return exePath;
                 }
                 case RuntimePlatform.OSXEditor:
-                    return "/Applications/Anchorpoint.app";
+                    // The macOS app launch flow expects the .app bundle (used with `open`).
+                    // When the install folder is overridden to <bundle>/Contents/Frameworks, walk up two levels to find the bundle.
+                    if (overrideSource != null && !string.IsNullOrEmpty(installFolder))
+                    {
+                        DirectoryInfo dir = new DirectoryInfo(installFolder);
+                        if (dir.Name == "Frameworks"
+                            && dir.Parent != null && dir.Parent.Name == "Contents"
+                            && dir.Parent.Parent != null
+                            && string.Equals(dir.Parent.Parent.Extension, ".app", StringComparison.OrdinalIgnoreCase))
+                        {
+                            return dir.Parent.Parent.FullName;
+                        }
+                    }
+                    return MacDefaultAppBundle;
             }
 
             return null;

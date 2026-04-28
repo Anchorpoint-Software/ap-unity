@@ -1,5 +1,9 @@
 
 
+# 1.0.9
+
+- Add support for the -anchorpointRoot command-line argument and ANCHORPOINT_ROOT environment variable to point at a custom Anchorpoint installation
+
 # 1.0.8
 
 - Fix NullReferenceException on startup and when file lock icons appear
